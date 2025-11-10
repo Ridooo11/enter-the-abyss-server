@@ -227,7 +227,7 @@
   </object>
  </objectgroup>
  <objectgroup id="11" name="transiciones">
-  <object id="49" x="236.458" y="-0.178017" width="7.7497" height="7.02267">
+  <object id="49" x="235.576" y="15.2532" width="7.7497" height="7.02267">
    <properties>
     <property name="destino" value="sala3"/>
    </properties>

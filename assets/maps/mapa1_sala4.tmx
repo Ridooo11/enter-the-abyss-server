@@ -215,14 +215,14 @@
   </object>
  </objectgroup>
  <objectgroup id="10" name="transiciones">
-  <object id="34" x="236.491" y="0.4074" width="7.7314" height="5.449">
+  <object id="34" x="236.824" y="16.4074" width="7.7314" height="5.449">
    <properties>
     <property name="destino" value="sala5"/>
    </properties>
   </object>
  </objectgroup>
  <objectgroup id="17" name="puertas">
-  <object id="38" x="224" y="0" width="32" height="32">
+  <object id="38" x="224.333" y="0.151515" width="32" height="32">
    <properties>
     <property name="capa" value="Puerta"/>
     <property name="tipo" value="puerta"/>

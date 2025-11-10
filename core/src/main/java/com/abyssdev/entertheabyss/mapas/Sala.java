@@ -1,7 +1,9 @@
 package com.abyssdev.entertheabyss.mapas;
 
+import com.abyssdev.entertheabyss.network.ServerThread;
 import com.abyssdev.entertheabyss.personajes.Boss;
 import com.abyssdev.entertheabyss.personajes.Enemigo;
+import com.badlogic.gdx.maps.MapLayer;
 import com.badlogic.gdx.maps.objects.PointMapObject;
 import com.badlogic.gdx.maps.tiled.TiledMap;
 import com.badlogic.gdx.maps.tiled.TmxMapLoader;
@@ -25,7 +27,7 @@ public class Sala {
     private Array<Rectangle> colisionesEstaticas;
     private Array<Rectangle> colisionesDinamicas;
     private Array<Rectangle> colisiones;
-    private Array<ZonaTransicion> zonasTransicion;
+    private Array<ZonaTransicion> zonasTransicion = new Array<>();
     private ArrayList<Enemigo> enemigos;
     private Boss bossFinal;
     private boolean bossGenerado = false;
@@ -35,10 +37,13 @@ public class Sala {
     private boolean enemigosGenerados = false;
     private float anchoTiles, altoTiles;
     private static final float TILE_SIZE = 16f;
+    private ServerThread serverThread;
 
-    public Sala(String id, String rutaTmx, int cantidadEnemigos) {
+
+    public Sala(String id, String rutaTmx, int cantidadEnemigos, ServerThread serverThread) {
         this.id = id;
         this.cantidadEnemigos = cantidadEnemigos;
+        this.serverThread = serverThread;
         cargarMapa(rutaTmx);
         cargarColisiones();
         cargarPuertas();
@@ -56,6 +61,8 @@ public class Sala {
         anchoTiles = capaBase.getWidth();
         altoTiles = capaBase.getHeight();
     }
+
+
 
     private void cargarColisiones() {
         colisionesEstaticas = new Array<>();
@@ -239,6 +246,12 @@ public class Sala {
                     if (nuevoEnemigo != null) {
                         enemigos.add(nuevoEnemigo);
                         System.out.println("✅ Enemigo generado en (" + nuevoEnemigo.getPosicion().x + ", " + nuevoEnemigo.getPosicion().y + ")");
+
+                        String msg = "SpawnEnemy:" + (enemigos.size() - 1) + ":" +
+                            nuevoEnemigo.getPosicion().x + ":" +
+                            nuevoEnemigo.getPosicion().y;
+                        serverThread.sendMessageToAll(msg);
+
                     } else {
                         System.err.println("❌ No se pudo generar enemigo después de " + MAX_INTENTOS + " intentos.");
                     }
@@ -346,8 +359,15 @@ public class Sala {
         // ✅ Solo actualizar colisiones si cambió algo
         if (algunaPuertaSeAbrio) {
             actualizarColisiones();
+
+            // 🟢 NUEVO: Notificar a los clientes
+            if (serverThread != null) {
+                serverThread.sendMessageToAll("DoorOpened:" + id);
+                System.out.println("📨 Enviando evento DoorOpened para sala " + id);
+            }
         }
     }
+
 
     /**
      * ✅ Reconstruye la lista de colisiones combinando estáticas y dinámicas
@@ -377,7 +397,6 @@ public class Sala {
     public TiledMap getMapa() { return this.mapa; }
     public OrthogonalTiledMapRenderer getRenderer() { return this.renderer; }
     public Array<Rectangle> getColisiones() { return this.colisiones; }
-    public Array<ZonaTransicion> getZonasTransicion() { return this.zonasTransicion; }
     public ArrayList<Enemigo> getEnemigos() { return this.enemigos; }
     public float getAnchoMundo() { return this.anchoTiles; }
     public float getAltoMundo() { return this.altoTiles; }
@@ -385,6 +404,10 @@ public class Sala {
     public Boss getBoss() { return this.bossFinal; }
     public void setBoss(Boss boss) { this.bossFinal = boss; }
     public boolean getBossGenerado() { return this.bossGenerado; }
+    public Array<ZonaTransicion> getZonasTransicion() {
+        return this.zonasTransicion;
+    }
+
 
 
 
@@ -392,4 +415,6 @@ public class Sala {
         if (mapa != null) mapa.dispose();
         if (renderer != null) renderer.dispose();
     }
+
+
 }

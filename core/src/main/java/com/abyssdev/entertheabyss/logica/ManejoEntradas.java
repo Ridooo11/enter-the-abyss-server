@@ -16,16 +16,16 @@ public class ManejoEntradas implements InputProcessor {
         switch (keycode) {
             // Controles de movimiento
             case Input.Keys.W:
-                jugador.moverArriba(true);
+                jugador.setMovimientoArriba(true);
                 break;
             case Input.Keys.S:
-                jugador.moverAbajo(true);
+                jugador.setMovimientoAbajo(true);
                 break;
             case Input.Keys.A:
-                jugador.moverIzquierda(true);
+                jugador.setMovimientoIzquierda(true);
                 break;
             case Input.Keys.D:
-                jugador.moverDerecha(true);
+                jugador.setMovimientoDerecha(true);
                 break;
             // Tecla de ataque (ESPACIO)
             case Input.Keys.SPACE:
@@ -44,16 +44,16 @@ public class ManejoEntradas implements InputProcessor {
         switch (keycode) {
             // Controles de movimiento
             case Input.Keys.W:
-                jugador.moverArriba(false);
+                jugador.setMovimientoArriba(false);
                 break;
             case Input.Keys.S:
-                jugador.moverAbajo(false);
+                jugador.setMovimientoAbajo(false);
                 break;
             case Input.Keys.A:
-                jugador.moverIzquierda(false);
+                jugador.setMovimientoIzquierda(false);
                 break;
             case Input.Keys.D:
-                jugador.moverDerecha(false);
+                jugador.setMovimientoDerecha(false);
                 break;
             // Para la tecla ESPACIO, no necesitas hacer nada en keyUp
             // porque la acción de ataque se inicia en keyDown y es gestionada

@@ -137,7 +137,7 @@ public class MenuInicio extends Pantalla {
                 case 0: // Iniciar Servidor
                     System.out.println("🖥️ Iniciando SERVIDOR DEDICADO...");
                     Sonidos.detenerTodaMusica();
-                    juego.setScreen(new PantallaServidor(juego, batch));
+                    juego.setScreen(new PantallaJuego(juego, batch));
                     break;
                 case 1:
                     juego.setScreen(new PantallaOpciones(juego, batch, this));

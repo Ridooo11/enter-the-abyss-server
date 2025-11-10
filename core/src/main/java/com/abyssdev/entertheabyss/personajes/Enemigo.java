@@ -225,6 +225,14 @@ public class Enemigo {
         }
     }
 
+    public Accion getEstado() {
+        return estado;
+    }
+
+    public boolean isHaciaIzquierda() {
+        return haciaIzquierda;
+    }
+
     public Rectangle getRectangulo() {
         return new Rectangle(posicion.x, posicion.y, TAMANO, TAMANO);
     }

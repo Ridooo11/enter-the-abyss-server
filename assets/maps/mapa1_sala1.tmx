@@ -195,7 +195,7 @@
   </object>
  </objectgroup>
  <objectgroup id="11" name="transiciones">
-  <object id="49" x="228.458" y="-6.51135" width="24.7497" height="18.356">
+  <object id="49" x="227.135" y="6.71543" width="24.7497" height="18.356">
    <properties>
     <property name="destino" value="sala2"/>
     <property name="pasaMapa" type="bool" value="true"/>
