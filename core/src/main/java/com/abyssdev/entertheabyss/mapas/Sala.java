@@ -200,64 +200,51 @@ public class Sala {
         enemigos = new ArrayList<>();
 
         for (int i = 0; i < cantidadEnemigos; i++) {
-            final int delay = i;
+            Enemigo nuevoEnemigo = null;
+            int intentos = 0;
+            final int MAX_INTENTOS = 50;
 
-            Timer.schedule(new Timer.Task() {
-                @Override
-                public void run() {
-                    Enemigo nuevoEnemigo = null;
-                    int intentos = 0;
-                    final int MAX_INTENTOS = 50; // Evitar bucle infinito
+            while (nuevoEnemigo == null && intentos < MAX_INTENTOS) {
+                float x = MathUtils.random(2f, getAnchoMundo() - 2f);
+                float y = MathUtils.random(2f, getAltoMundo() - 2f);
+                Rectangle rectTemp = new Rectangle(x, y, Enemigo.getTamaño(), Enemigo.getTamaño());
 
-                    while (nuevoEnemigo == null && intentos < MAX_INTENTOS) {
-                        float x = MathUtils.random(2f, getAnchoMundo() - 2f);
-                        float y = MathUtils.random(2f, getAltoMundo() - 2f);
+                boolean colisiona = false;
 
-                        // Crear rectángulo temporal para verificar colisión
-                        Rectangle rectTemp = new Rectangle(x, y, Enemigo.getTamaño(), Enemigo.getTamaño());
-
-                        boolean colisiona = false;
-
-                        // Verificar colisiones con paredes
-                        for (Rectangle r : colisiones) {
-                            if (rectTemp.overlaps(r)) {
-                                colisiona = true;
-                                break;
-                            }
-                        }
-
-                        // Verificar colisiones con otros enemigos ya generados
-                        if (!colisiona) {
-                            for (Enemigo e : enemigos) {
-                                if (rectTemp.overlaps(e.getRectangulo())) {
-                                    colisiona = true;
-                                    break;
-                                }
-                            }
-                        }
-
-                        if (!colisiona) {
-                            nuevoEnemigo = new Enemigo(x, y,3f,2f,10);
-                        }
-
-                        intentos++;
-                    }
-
-                    if (nuevoEnemigo != null) {
-                        enemigos.add(nuevoEnemigo);
-                        System.out.println("✅ Enemigo generado en (" + nuevoEnemigo.getPosicion().x + ", " + nuevoEnemigo.getPosicion().y + ")");
-
-                        String msg = "SpawnEnemy:" + (enemigos.size() - 1) + ":" +
-                            nuevoEnemigo.getPosicion().x + ":" +
-                            nuevoEnemigo.getPosicion().y;
-                        serverThread.sendMessageToAll(msg);
-
-                    } else {
-                        System.err.println("❌ No se pudo generar enemigo después de " + MAX_INTENTOS + " intentos.");
+                for (Rectangle r : colisiones) {
+                    if (rectTemp.overlaps(r)) {
+                        colisiona = true;
+                        break;
                     }
                 }
-            }, delay * 1.5f);
+
+                if (!colisiona) {
+                    for (Enemigo e : enemigos) {
+                        if (rectTemp.overlaps(e.getRectangulo())) {
+                            colisiona = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (!colisiona) {
+                    nuevoEnemigo = new Enemigo(x, y, 1f, 2f, 10);
+                }
+
+                intentos++;
+            }
+
+            if (nuevoEnemigo != null) {
+                enemigos.add(nuevoEnemigo);
+                System.out.println("✅ Enemigo " + i + " generado en (" +
+                    nuevoEnemigo.getPosicion().x + ", " +
+                    nuevoEnemigo.getPosicion().y + ")");
+            } else {
+                System.err.println("❌ No se pudo generar enemigo " + i);
+            }
         }
+
+        System.out.println("🎯 Total de enemigos generados: " + enemigos.size());
     }
 
     public void generarBoss() {

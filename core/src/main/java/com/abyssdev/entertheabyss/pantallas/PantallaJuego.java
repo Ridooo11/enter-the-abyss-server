@@ -50,7 +50,13 @@ public class PantallaJuego extends Pantalla implements GameController {
         mapaActual.agregarSala(new Sala("sala3", "maps/mapa1_sala5.tmx", 4, this.serverThread));
         mapaActual.agregarSala(new Sala("sala4", "maps/mapa1_sala4.tmx", 6, this.serverThread));
         mapaActual.agregarSala(new Sala("sala5", "maps/mapa2_posible.tmx", 8, this.serverThread));
-        cambiarSala("sala1");
+
+        salaActual = mapaActual.getSala("sala1");
+        mapaActual.establecerSalaActual("sala1");
+
+        // 🔹 GENERAR ENEMIGOS DE LA SALA INICIAL
+        System.out.println("👾 Generando enemigos iniciales...");
+        salaActual.generarEnemigos();
 
     }
 
@@ -191,6 +197,7 @@ public class PantallaJuego extends Pantalla implements GameController {
 
                     // Notificar a todos los clientes
                     serverThread.sendMessageToAll("RoomChange:" + zona.destinoSalaId);
+                    serverThread.sendExistingEnemiesToClient();
 
                     // Romper el bucle para no procesar más zonas
                     break;
@@ -243,29 +250,22 @@ public class PantallaJuego extends Pantalla implements GameController {
             return;
         }
 
-
+        // 🔹 PRIMERO: Cambiar la sala actual
         salaActual = salaDestino;
         mapaActual.establecerSalaActual(destinoId);
 
         System.out.println("🗺️ Servidor: cambiando a sala " + destinoId);
 
-        // 🔹 Generar enemigos si no existen
+        // 🔹 SEGUNDO: Generar enemigos si no existen
         if (salaActual.getEnemigos() == null || salaActual.getEnemigos().isEmpty()) {
+            System.out.println("👾 Generando enemigos para sala " + destinoId);
             salaActual.generarEnemigos();
+            enviarEnemigosASala(destinoId);
+
+        } else {
+            System.out.println("♻️ Reutilizando enemigos existentes de sala " + destinoId);
+            enviarEnemigosASala(destinoId);
         }
-
-
-        ArrayList<ZonaTransicion> zonas = new ArrayList<>();
-        zonas.add(new ZonaTransicion(30, 10, 2, 4, "sala2", "spawn_centro"));
-        zonas.add(new ZonaTransicion(0, 10, 2, 4, "sala1", "spawn_centro"));
-
-        // Enviar info de zonas a todos los clientes
-        for (ZonaTransicion zona : zonas) {
-            String msg = "ZonaTransicion:" + zona.x + "," + zona.y + "," + zona.width + "," +
-                zona.height + "," + zona.destinoSalaId + "," + zona.spawnName;
-            serverThread.sendMessageToAll(msg);
-        }
-
 
         if (salaActual.getEnemigos() != null && !salaActual.getEnemigos().isEmpty()) {
             StringBuilder datosEnemigos = new StringBuilder();
@@ -287,9 +287,11 @@ public class PantallaJuego extends Pantalla implements GameController {
             }
         }
 
+
         serverThread.sendMessageToAll("RoomChange:" + destinoId);
 
-        // 🔹 Reposicionar jugadores y enviar sus posiciones a clientes
+
+        // 🔹 TERCERO: Reposicionar jugadores
         for (Jugador jugador : jugadores.values()) {
             SpawnPoint spawn = null;
             for (SpawnPoint sp : salaDestino.getSpawnPoints()) {
@@ -320,6 +322,30 @@ public class PantallaJuego extends Pantalla implements GameController {
         }
     }
 
+    // 🔹 AGREGAR ESTE MÉTODO
+    private void enviarEnemigosASala(String salaId) {
+        Sala sala = mapaActual.getSala(salaId);
+        if (sala == null || sala.getEnemigos() == null) {
+            System.out.println("⚠️ No hay enemigos para enviar en sala " + salaId);
+            return;
+        }
+
+        System.out.println("📦 Enviando " + sala.getEnemigos().size() + " enemigos de sala " + salaId);
+
+        for (int i = 0; i < sala.getEnemigos().size(); i++) {
+            Enemigo e = sala.getEnemigos().get(i);
+            if (e != null && !e.debeEliminarse()) {
+                String msg = "SpawnEnemy:" + i + ":" +
+                    e.getPosicion().x + ":" +
+                    e.getPosicion().y;
+                serverThread.sendMessageToAll(msg);
+                System.out.println("   📨 Enemigo " + i + " en (" +
+                    e.getPosicion().x + ", " + e.getPosicion().y + ")");
+            }
+        }
+
+
+    }
 
 
     // ===== GameController =====
