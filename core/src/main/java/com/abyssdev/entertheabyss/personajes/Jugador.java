@@ -1,11 +1,18 @@
 package com.abyssdev.entertheabyss.personajes;
 
+import com.abyssdev.entertheabyss.habilidades.*;
+import com.abyssdev.entertheabyss.logica.ManejoEntradas;
 import com.abyssdev.entertheabyss.personajes.Accion;
 import com.abyssdev.entertheabyss.personajes.Direccion;
+import com.abyssdev.entertheabyss.ui.Hud;
 import com.abyssdev.entertheabyss.ui.Sonidos;
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.Array;
+
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Versión SERVIDOR del Jugador
@@ -18,8 +25,8 @@ public class Jugador {
 
     // Física y posición
     private Vector2 posicion;
-    private float velocidad = 3.2f;
-    private float velocidadBase = 3.2f;
+    private float velocidad = 3f;
+    private float velocidadBase = 3f;
 
     // Hitbox
     private final float ancho = 3f, alto = 3f;
@@ -57,13 +64,41 @@ public class Jugador {
     private float cooldownEvasion = 1.5f;
     private float tiempoDesdeUltimaEvasion = 0f;
 
-    // Inputs (recibidos del cliente)
+
     private boolean arriba, abajo, izquierda, derecha;
+
+    private Map<String, Habilidad> habilidades;
 
     public Jugador(int numeroJugador, float x, float y) {
         this.numeroJugador = numeroJugador;
         this.posicion = new Vector2(x, y);
         this.hitboxAtaque = new Rectangle(0, 0, 0, 0);
+
+    }
+
+
+
+    public boolean intentarComprarHabilidad(String nombreHabilidad) {
+        Habilidad habilidad = habilidades.get(nombreHabilidad);
+
+        if (habilidad == null) return false;
+
+        habilidad.comprada = true;
+        habilidad.aplicar(this);
+
+        return true;
+    }
+
+
+    public String serializarHabilidades() {
+        StringBuilder sb = new StringBuilder();
+
+        for (Map.Entry<String, Habilidad> entry : habilidades.entrySet()) {
+            sb.append(entry.getKey()).append(",");
+            sb.append(entry.getValue().comprada ? "1" : "0").append(";");
+        }
+
+        return sb.toString();
     }
 
     /**
@@ -301,6 +336,9 @@ public class Jugador {
     public Rectangle getHitboxAtaque() { return hitboxAtaque; }
     public Rectangle getHitbox() {
         return new Rectangle(posicion.x + offsetHitboxX, posicion.y + offsetHitboxY, anchoHitbox, altoHitbox);
+    }
+    public Map<String, Habilidad> getHabilidades() {
+        return habilidades;
     }
 
     // ==================== SETTERS ====================

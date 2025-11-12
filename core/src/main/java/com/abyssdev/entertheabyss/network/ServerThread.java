@@ -27,20 +27,6 @@ public class ServerThread extends Thread {
     private PantallaJuego gameController;
     private Rectangle hitbox;
 
-    public static class Client {
-        public int num;
-        public String id;
-        public InetAddress ip;
-        public int port;
-
-        public Client(int num, InetAddress ip, int port) {
-            this.num = num;
-            this.id = ip.toString() + ":" + port;
-            this.ip = ip;
-            this.port = port;
-        }
-    }
-
     public ServerThread(PantallaJuego gameController) {
         this.gameController = gameController;
         try {
@@ -95,21 +81,21 @@ public class ServerThread extends Thread {
                     boolean izquierda = Boolean.parseBoolean(parts[3]);
                     boolean derecha = Boolean.parseBoolean(parts[4]);
 
-                    gameController.actualizarMovimiento(client.num, arriba, abajo, izquierda, derecha);
+                    gameController.actualizarMovimiento(client.getNum(), arriba, abajo, izquierda, derecha);
                 }
                 break;
 
             case "Attack":
                 if (clientIndex != -1) {
                     Client client = clients.get(clientIndex);
-                    gameController.attack(client.num);
+                    gameController.attack(client.getNum());
                 }
                 break;
 
             case "Dash":
                 if (clientIndex != -1) {
-                    // TODO: Implementar dash en servidor
-                    System.out.println("🏃 Jugador " + clients.get(clientIndex).num + " usa dash");
+
+                    System.out.println("🏃 Jugador " + clients.get(clientIndex).getNum() + " usa dash");
                 }
                 break;
 
@@ -117,7 +103,17 @@ public class ServerThread extends Thread {
                 if (clientIndex != -1 && parts.length >= 2) {
                     Client client = clients.get(clientIndex);
                     String roomId = parts[1];
-                    gameController.changeRoom(client.num, roomId);
+                    gameController.changeRoom(client.getNum(), roomId);
+                }
+                break;
+
+
+            case "ComprarHabilidad":
+                // ComprarHabilidad:nombreHabilidad
+                if (clientIndex != -1 && parts.length >= 2) {
+                    Client client = clients.get(clientIndex);
+                    String nombreHabilidad = parts[1];
+                    gameController.comprarHabilidad(client.getNum(), nombreHabilidad);
                 }
                 break;
 
@@ -153,7 +149,7 @@ public class ServerThread extends Thread {
             if (connectedClients == MAX_CLIENTS) {
                 System.out.println("🎮 Todos los jugadores conectados, iniciando juego...");
                 for (Client client : clients) {
-                    sendMessage("Start", client.ip, client.port);
+                    sendMessage("Start", client.getIp(), client.getPort());
                 }
             }
         } else {
@@ -166,7 +162,7 @@ public class ServerThread extends Thread {
         String id = packet.getAddress().toString() + ":" + packet.getPort();
 
         for (int i = 0; i < clients.size(); i++) {
-            if (clients.get(i).id.equals(id)) {
+            if (clients.get(i).getId().equals(id)) {
                 return i;
             }
         }
@@ -195,7 +191,7 @@ public class ServerThread extends Thread {
         // System.out.println("📢 Broadcast: " + message);
 
         for (Client client : clients) {
-            sendMessage(message, client.ip, client.port);
+            sendMessage(message, client.getIp(), client.getPort());
         }
     }
 
@@ -235,11 +231,22 @@ public class ServerThread extends Thread {
         System.out.println("📦 Enviados " + sala.getEnemigos().size() + " enemigos existentes a todos los clientes");
     }
 
+    public Client getClientByNum(int num) {
+        for (Client client : clients) {
+            if (client.getNum() == num) {
+                return client;
+            }
+        }
+        return null;
+    }
+
+
+
     public void disconnectClients() {
         System.out.println("🔌 Desconectando todos los clientes");
 
         for (Client client : clients) {
-            sendMessage("Disconnect", client.ip, client.port);
+            sendMessage("Disconnect", client.getIp(), client.getPort());
         }
 
         clients.clear();

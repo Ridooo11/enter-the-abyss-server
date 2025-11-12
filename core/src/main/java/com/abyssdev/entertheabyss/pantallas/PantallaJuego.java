@@ -29,7 +29,7 @@ public class PantallaJuego extends Pantalla implements GameController {
 
     // ⏱️ Ticks
     private float tiempoAcumulado = 0f;
-    private static final float TICK_RATE = 1f / 30f; // 30 FPS lógica
+    private static final float TICK_RATE = 1f / 60f; // 30 FPS lógica
 
     public PantallaJuego(Game juego, SpriteBatch batch) {
         super(juego, batch);
@@ -46,12 +46,12 @@ public class PantallaJuego extends Pantalla implements GameController {
         // Inicializar mapa y salas
         mapaActual = new Mapa("mazmorra1");
         mapaActual.agregarSala(new Sala("sala1", "maps/mapa1_sala1.tmx", 2, this.serverThread));
-        mapaActual.agregarSala(new Sala("sala2", "maps/mapa1_sala2.tmx", 0, this.serverThread));
-        mapaActual.agregarSala(new Sala("sala3", "maps/mapa1_sala5.tmx", 2, this.serverThread));
-        mapaActual.agregarSala(new Sala("sala4", "maps/mapa1_sala4.tmx", 1, this.serverThread));
-        mapaActual.agregarSala(new Sala("sala5", "maps/mapa2_posible.tmx", 15, this.serverThread));
-
+        mapaActual.agregarSala(new Sala("sala2", "maps/mapa1_sala2.tmx", 3, this.serverThread));
+        mapaActual.agregarSala(new Sala("sala3", "maps/mapa1_sala5.tmx", 4, this.serverThread));
+        mapaActual.agregarSala(new Sala("sala4", "maps/mapa1_sala4.tmx", 6, this.serverThread));
+        mapaActual.agregarSala(new Sala("sala5", "maps/mapa2_posible.tmx", 8, this.serverThread));
         cambiarSala("sala1");
+
     }
 
     @Override
@@ -60,6 +60,8 @@ public class PantallaJuego extends Pantalla implements GameController {
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
         if (!juegoIniciado) return;
+
+
 
         tiempoAcumulado += delta;
         while (tiempoAcumulado >= TICK_RATE) {
@@ -92,16 +94,18 @@ public class PantallaJuego extends Pantalla implements GameController {
 
                 Jugador jugadorCercano = obtenerJugadorMasCercano(enemigo);
                 if (jugadorCercano != null) {
-                    boolean ataco = enemigo.actualizar(delta, jugadorCercano.getPosicion(), salaActual.getColisiones(), enemigos);
+                    boolean ataco = enemigo.actualizar(delta, jugadorCercano.getPosicion(),
+                        salaActual.getColisiones(), enemigos);
                     if (ataco) {
                         jugadorCercano.recibirDanio(enemigo.getDanio());
-                        serverThread.sendMessageToAll("UpdateHealth:" + jugadorCercano.getNumeroJugador() + ":" + jugadorCercano.getVida());
+                        serverThread.sendMessageToAll("UpdateHealth:" +
+                            jugadorCercano.getNumeroJugador() + ":" + jugadorCercano.getVida());
                     }
                 }
             }
         }
 
-        // 3️⃣ Colisiones de ataques
+        // 3️⃣ Colisiones de ataques - ✅ MODIFICAR ESTA SECCIÓN
         for (Jugador jugador : jugadores.values()) {
             Rectangle hitboxAtaque = jugador.getHitboxAtaque();
             if (hitboxAtaque.getWidth() <= 0 || enemigos == null) continue;
@@ -110,39 +114,67 @@ public class PantallaJuego extends Pantalla implements GameController {
                 Enemigo enemigo = enemigos.get(i);
                 if (!enemigo.debeEliminarse() && hitboxAtaque.overlaps(enemigo.getRectangulo())) {
                     enemigo.recibirDanio(jugador.getDanio());
+
+                    // ✅ SI EL ENEMIGO MUERE, DAR MONEDAS
                     if (enemigo.debeEliminarse()) {
-                        jugador.modificarMonedas(10);
-                        serverThread.sendMessageToAll("UpdateCoins:" + jugador.getNumeroJugador() + ":" + jugador.getMonedas());
+                        int monedasGanadas = 10; // Puedes ajustar esto
+                        jugador.modificarMonedas(monedasGanadas);
+
+                        // ✅ ENVIAR ACTUALIZACIÓN DE MONEDAS A TODOS LOS CLIENTES
+                        serverThread.sendMessageToAll("UpdateCoins:" +
+                            jugador.getNumeroJugador() + ":" + jugador.getMonedas());
+
+                        System.out.println("💰 Jugador " + jugador.getNumeroJugador() +
+                            " ganó " + monedasGanadas + " monedas. Total: " + jugador.getMonedas());
                     }
                 }
             }
         }
 
-        boolean noHayEnemigosVivos = enemigos == null || enemigos.isEmpty();
 
-
-
-        // 4️⃣ Boss (solo en sala5)
         if (salaActual.getId().equalsIgnoreCase("sala5")) {
             Boss boss = salaActual.getBoss();
-            if (boss == null) salaActual.generarBoss();
-            else if (!boss.debeEliminarse()) {
+            if (boss == null) {
+                salaActual.generarBoss();
+            } else if (!boss.debeEliminarse()) {
                 Jugador jugadorCercano = obtenerJugadorMasCercano(boss);
                 if (jugadorCercano != null) {
-                    boolean ataco = boss.actualizar(delta, jugadorCercano.getPosicion(), salaActual.getColisiones(),
-                        enemigos != null ? enemigos : new ArrayList<>());
+                    boolean ataco = boss.actualizar(delta, jugadorCercano.getPosicion(),
+                        salaActual.getColisiones(), enemigos != null ? enemigos : new ArrayList<>());
                     if (ataco) {
                         jugadorCercano.recibirDanio(boss.getDanio());
-                        serverThread.sendMessageToAll("UpdateHealth:" + jugadorCercano.getNumeroJugador() + ":" + jugadorCercano.getVida());
+                        serverThread.sendMessageToAll("UpdateHealth:" +
+                            jugadorCercano.getNumeroJugador() + ":" + jugadorCercano.getVida());
+                    }
+                }
+
+
+                for (Jugador jugador : jugadores.values()) {
+                    Rectangle hitboxAtaque = jugador.getHitboxAtaque();
+                    if (hitboxAtaque.getWidth() <= 0) continue;
+
+                    if (hitboxAtaque.overlaps(boss.getRectangulo())) {
+                        boss.recibirDanio(jugador.getDanio());
+
+
+                        if (boss.debeEliminarse()) {
+                            int monedasGanadas = 50; // Boss da más monedas
+                            jugador.modificarMonedas(monedasGanadas);
+
+                            serverThread.sendMessageToAll("UpdateCoins:" +
+                                jugador.getNumeroJugador() + ":" + jugador.getMonedas());
+                            serverThread.sendMessageToAll("BossDead");
+
+                            System.out.println("👑 Jugador " + jugador.getNumeroJugador() +
+                                " derrotó al Boss y ganó " + monedasGanadas + " monedas!");
+                        }
                     }
                 }
             }
         }
-
 
         salaActual.actualizarPuertas();
         verificarTransicionesServidor();
-
     }
 
 
@@ -211,7 +243,7 @@ public class PantallaJuego extends Pantalla implements GameController {
             return;
         }
 
-        Sala salaAnterior = salaActual;
+
         salaActual = salaDestino;
         mapaActual.establecerSalaActual(destinoId);
 
@@ -234,20 +266,28 @@ public class PantallaJuego extends Pantalla implements GameController {
             serverThread.sendMessageToAll(msg);
         }
 
-        // 🔹 Avisar a clientes que cambien de sala
-        serverThread.sendMessageToAll("RoomChange:" + destinoId);
 
-        // 🔹 Enviar enemigos existentes
         if (salaActual.getEnemigos() != null && !salaActual.getEnemigos().isEmpty()) {
-            String datosEnemigos = "";
+            StringBuilder datosEnemigos = new StringBuilder();
+
+
             for (Enemigo e : salaActual.getEnemigos()) {
-                datosEnemigos += e.getPosicion().x + "," + e.getPosicion().y + ";";
+                datosEnemigos.append(e.getPosicion().x).append(", ").append(e.getPosicion().y).append(";");
             }
-            if (!datosEnemigos.isEmpty()) {
-                datosEnemigos = datosEnemigos.substring(0, datosEnemigos.length() - 1);
+
+
+            System.out.println("Datos de enemigos: " + datosEnemigos.toString());
+
+            if (datosEnemigos.length() > 0) {
+
+                datosEnemigos = new StringBuilder(datosEnemigos.substring(0, datosEnemigos.length() - 1));
+
+
                 serverThread.sendMessageToAll("SyncEnemies:" + datosEnemigos);
             }
         }
+
+        serverThread.sendMessageToAll("RoomChange:" + destinoId);
 
         // 🔹 Reposicionar jugadores y enviar sus posiciones a clientes
         for (Jugador jugador : jugadores.values()) {
@@ -283,13 +323,37 @@ public class PantallaJuego extends Pantalla implements GameController {
 
 
     // ===== GameController =====
-    @Override public void startGame() { juegoIniciado = true; }
+    @Override public void startGame() { juegoIniciado = true;}
     @Override public void move(int n, float x, float y) {}
     @Override public void attack(int n) { if (jugadores.get(n) != null) jugadores.get(n).procesarAtaque(); }
     @Override public void enemyKilled(int n, int id) {}
     @Override public void bossKilled(int n) {}
-    @Override public void changeRoom(int n, String roomId) { cambiarSala(roomId); serverThread.sendMessageToAll("RoomChange:" + roomId); }
+    @Override public void changeRoom(int n, String roomId) { cambiarSala(roomId); serverThread.sendMessageToAll("RoomChange:" + roomId);}
     @Override public void timeOut() { serverThread.disconnectClients(); }
+
+
+
+
+    @Override
+    public void comprarHabilidad(int numPlayer, String nombreHabilidad) {
+        Jugador jugador = jugadores.get(numPlayer);
+        if (jugador == null) return;
+
+        boolean exito = jugador.intentarComprarHabilidad(nombreHabilidad);
+
+        if (exito) {
+            // Enviar confirmación con datos actualizados
+            String datosHabilidades = jugador.serializarHabilidades();
+            serverThread.sendMessage("CompraExitosa:" + nombreHabilidad + ":" + datosHabilidades + ":" + jugador.getMonedas(),
+                serverThread.getClientByNum(numPlayer).getIp(),
+                serverThread.getClientByNum(numPlayer).getPort());
+        } else {
+            // Enviar rechazo
+            serverThread.sendMessage("CompraFallida:" + nombreHabilidad,
+                serverThread.getClientByNum(numPlayer).getIp(),
+                serverThread.getClientByNum(numPlayer).getPort());
+        }
+    }
 
     public void actualizarMovimiento(int n, boolean up, boolean down, boolean left, boolean right) {
         Jugador j = jugadores.get(n);

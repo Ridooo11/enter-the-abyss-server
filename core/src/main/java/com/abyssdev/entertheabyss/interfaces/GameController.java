@@ -8,4 +8,5 @@ public interface GameController {
     void bossKilled(int numPlayer);
     void changeRoom(int numPlayer, String roomId);
     void timeOut();
+    void comprarHabilidad(int numPlayer, String nombreHabilidad);
 }

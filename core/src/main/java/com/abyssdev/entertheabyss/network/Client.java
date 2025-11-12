@@ -17,18 +17,18 @@ public class Client {
     }
 
     public String getId() {
-        return id;
+        return this.id;
     }
 
     public InetAddress getIp() {
-        return ip;
+        return this.ip;
     }
 
     public int getPort() {
-        return port;
+        return this.port;
     }
 
     public int getNum() {
-        return num;
+        return this.num;
     }
 }
