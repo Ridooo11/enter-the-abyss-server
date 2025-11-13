@@ -254,6 +254,7 @@ public class PantallaJuego extends Pantalla implements GameController {
         salaActual = salaDestino;
         mapaActual.establecerSalaActual(destinoId);
 
+        serverThread.sendMessageToAll("RoomChange:" + destinoId);
         System.out.println("🗺️ Servidor: cambiando a sala " + destinoId);
 
         // 🔹 SEGUNDO: Generar enemigos si no existen
@@ -266,6 +267,9 @@ public class PantallaJuego extends Pantalla implements GameController {
             System.out.println("♻️ Reutilizando enemigos existentes de sala " + destinoId);
             enviarEnemigosASala(destinoId);
         }
+
+
+
 
         if (salaActual.getEnemigos() != null && !salaActual.getEnemigos().isEmpty()) {
             StringBuilder datosEnemigos = new StringBuilder();
@@ -286,9 +290,6 @@ public class PantallaJuego extends Pantalla implements GameController {
                 serverThread.sendMessageToAll("SyncEnemies:" + datosEnemigos);
             }
         }
-
-
-        serverThread.sendMessageToAll("RoomChange:" + destinoId);
 
 
         // 🔹 TERCERO: Reposicionar jugadores
@@ -354,7 +355,7 @@ public class PantallaJuego extends Pantalla implements GameController {
     @Override public void attack(int n) { if (jugadores.get(n) != null) jugadores.get(n).procesarAtaque(); }
     @Override public void enemyKilled(int n, int id) {}
     @Override public void bossKilled(int n) {}
-    @Override public void changeRoom(int n, String roomId) { cambiarSala(roomId); serverThread.sendMessageToAll("RoomChange:" + roomId);}
+    @Override public void changeRoom(int n, String roomId) { cambiarSala(roomId);}
     @Override public void timeOut() { serverThread.disconnectClients(); }
 
 
