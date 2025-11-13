@@ -286,6 +286,10 @@ public class Jugador {
         this.vida = Math.min(this.vida, this.vidaMaxima);
     }
 
+    public void setAccionActual(Accion accion) {
+        this.accionActual = accion;
+    }
+
     public void reducirDanioRecibido(float porcentaje) {
         this.porcentajeReduccionDanio = Math.min(0.9f, this.porcentajeReduccionDanio + porcentaje);
     }

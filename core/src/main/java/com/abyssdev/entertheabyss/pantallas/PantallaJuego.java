@@ -84,6 +84,12 @@ public class PantallaJuego extends Pantalla implements GameController {
         // 1️⃣ Actualizar jugadores
         for (Jugador jugador : jugadores.values()) {
             jugador.update(delta, salaActual.getColisiones());
+
+            // ✅ VERIFICAR SI EL JUGADOR MURIÓ
+            if (jugador.getVida() <= 0 && jugador.getAccionActual() != Accion.MUERTE) {
+                jugador.setAccionActual(Accion.MUERTE);
+                playerDied(jugador.getNumeroJugador());
+            }
         }
 
         // 2️⃣ Actualizar enemigos
@@ -377,6 +383,28 @@ public class PantallaJuego extends Pantalla implements GameController {
     @Override public void bossKilled(int n) {}
     @Override public void changeRoom(int n, String roomId) { cambiarSala(roomId);}
     @Override public void timeOut() { serverThread.disconnectClients(); }
+    @Override
+    public void playerDied(int numPlayer) {
+        juegoIniciado = false;
+        System.out.println("💀 Jugador " + numPlayer + " ha muerto");
+
+        // Notificar a todos los clientes sobre la muerte
+        serverThread.sendMessageToAll("PlayerDied:" + numPlayer);
+
+        // Esperar 2 segundos antes de mostrar Game Over
+        new Thread(() -> {
+            try {
+                Thread.sleep(2000);
+
+                // Enviar señal de Game Over a todos los clientes
+                serverThread.sendMessageToAll("GameOver");
+                System.out.println("🎮 Game Over enviado a todos los clientes");
+
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }).start();
+    }
 
 
 

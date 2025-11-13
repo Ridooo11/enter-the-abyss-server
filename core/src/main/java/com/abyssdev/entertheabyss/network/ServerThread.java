@@ -69,8 +69,24 @@ public class ServerThread extends Thread {
                 break;
 
             case "Disconnect":
-                disconnectClients();
+                InetAddress address = packet.getAddress();
+                int port = packet.getPort();
+                System.out.println("🔌 Cliente desconectado: " + address + ":" + port);
+
+                int playerIndex = findPlayerIndex(address, port);
+                if (playerIndex != -1) {
+                    Client disconnectedClient = clients.get(playerIndex);
+                    System.out.println("🧹 Eliminando cliente " + disconnectedClient.getNum());
+
+                    clients.remove(playerIndex); // ✅ elimina el objeto del ArrayList
+                    connectedClients = Math.max(connectedClients - 1, 0);
+
+                } else {
+                    System.out.println("⚠️ Cliente no encontrado para eliminar");
+                }
                 break;
+
+
 
             case "Input":
                 // Input:arriba:abajo:izquierda:derecha
@@ -128,23 +144,30 @@ public class ServerThread extends Thread {
 
     private void handleConnect(DatagramPacket packet, int clientIndex) {
         if (clientIndex != -1) {
-            System.out.println("⚠️ Cliente ya conectado");
             sendMessage("AlreadyConnected", packet.getAddress(), packet.getPort());
             return;
         }
 
         if (connectedClients < MAX_CLIENTS) {
-            connectedClients++;
-            Client newClient = new Client(connectedClients, packet.getAddress(), packet.getPort());
+            // Asignar el número más bajo disponible
+            int playerNum = 1;
+            ArrayList<Integer> usados = new ArrayList<>();
+            for (Client c : clients) {
+                usados.add(c.getNum());
+            }
+            while (usados.contains(playerNum)) {
+                playerNum++;
+            }
+
+            Client newClient = new Client(playerNum, packet.getAddress(), packet.getPort());
             clients.add(newClient);
+            connectedClients++;
+
             sendExistingEnemiesToClient(packet.getAddress(), packet.getPort());
+            sendMessage("Connected:" + playerNum, packet.getAddress(), packet.getPort());
+            System.out.println("✅ Cliente " + playerNum + " conectado desde " + packet.getAddress() + ":" + packet.getPort());
 
-            sendMessage("Connected:" + connectedClients, packet.getAddress(), packet.getPort());
-            System.out.println("✅ Cliente " + connectedClients + " conectado desde " +
-                packet.getAddress() + ":" + packet.getPort());
-
-            // Crear jugador en el servidor
-            gameController.crearJugador(connectedClients);
+            gameController.crearJugador(playerNum);
 
             if (connectedClients == MAX_CLIENTS) {
                 System.out.println("🎮 Todos los jugadores conectados, iniciando juego...");
@@ -153,10 +176,10 @@ public class ServerThread extends Thread {
                 }
             }
         } else {
-            System.out.println("❌ Servidor lleno");
             sendMessage("Full", packet.getAddress(), packet.getPort());
         }
     }
+
 
     private int findClientIndex(DatagramPacket packet) {
         String id = packet.getAddress().toString() + ":" + packet.getPort();
@@ -187,13 +210,30 @@ public class ServerThread extends Thread {
         }
     }
 
-    public void sendMessageToAll(String message) {
-        // System.out.println("📢 Broadcast: " + message);
 
-        for (Client client : clients) {
-            sendMessage(message, client.getIp(), client.getPort());
+
+
+
+    public void sendMessageToAll(String message) {
+        for (Client client : new ArrayList<>(clients)) {
+            if (client != null) {
+                sendMessage(message, client.getIp(), client.getPort());
+            }
         }
     }
+
+
+    private int findPlayerIndex(InetAddress address, int port) {
+        for (int i = 0; i < clients.size(); i++) {
+            if (clients.get(i) != null &&
+                clients.get(i).getIp().equals(address) &&
+                clients.get(i).getPort() == port) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
 
     public void sendExistingEnemiesToClient(InetAddress clientIp, int clientPort) {
         if (this.gameController == null || this.gameController.getSalaActual() == null) return;
@@ -241,12 +281,17 @@ public class ServerThread extends Thread {
     }
 
 
-
     public void disconnectClients() {
         System.out.println("🔌 Desconectando todos los clientes");
 
         for (Client client : clients) {
             sendMessage("Disconnect", client.getIp(), client.getPort());
+        }
+
+        for (int i = 0; i < clients.size(); i++) {
+                clients.remove(i);
+                connectedClients--;
+                System.out.println("🔌 Cliente " + i + " desconectado. Clientes restantes: " + connectedClients);
         }
 
         clients.clear();

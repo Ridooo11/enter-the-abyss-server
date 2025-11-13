@@ -9,4 +9,6 @@ public interface GameController {
     void changeRoom(int numPlayer, String roomId);
     void timeOut();
     void comprarHabilidad(int numPlayer, String nombreHabilidad);
+
+    void playerDied(int numPlayer);
 }
