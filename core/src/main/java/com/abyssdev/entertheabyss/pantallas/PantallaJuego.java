@@ -29,7 +29,7 @@ public class PantallaJuego extends Pantalla implements GameController {
 
     // ⏱️ Ticks
     private float tiempoAcumulado = 0f;
-    private static final float TICK_RATE = 1f / 60f; // 30 FPS lógica
+    private static final float TICK_RATE = 1f / 30f; // 30 FPS lógica
 
     public PantallaJuego(Game juego, SpriteBatch batch) {
         super(juego, batch);
@@ -45,11 +45,11 @@ public class PantallaJuego extends Pantalla implements GameController {
 
         // Inicializar mapa y salas
         mapaActual = new Mapa("mazmorra1");
-        mapaActual.agregarSala(new Sala("sala1", "maps/mapa1_sala1.tmx", 2, this.serverThread));
-        mapaActual.agregarSala(new Sala("sala2", "maps/mapa1_sala2.tmx", 3, this.serverThread));
-        mapaActual.agregarSala(new Sala("sala3", "maps/mapa1_sala5.tmx", 4, this.serverThread));
-        mapaActual.agregarSala(new Sala("sala4", "maps/mapa1_sala4.tmx", 6, this.serverThread));
-        mapaActual.agregarSala(new Sala("sala5", "maps/mapa2_posible.tmx", 8, this.serverThread));
+        mapaActual.agregarSala(new Sala("sala1", "maps/mapa1_sala1.tmx", 1, this.serverThread));
+        mapaActual.agregarSala(new Sala("sala2", "maps/mapa1_sala2.tmx", 1, this.serverThread));
+        mapaActual.agregarSala(new Sala("sala3", "maps/mapa1_sala5.tmx", 1, this.serverThread));
+        mapaActual.agregarSala(new Sala("sala4", "maps/mapa1_sala4.tmx", 1, this.serverThread));
+        mapaActual.agregarSala(new Sala("sala5", "maps/mapa2_posible.tmx", 1, this.serverThread));
 
         salaActual = mapaActual.getSala("sala1");
         mapaActual.establecerSalaActual("sala1");
@@ -226,6 +226,16 @@ public class PantallaJuego extends Pantalla implements GameController {
                 e.getEstado().name() + ":" + (e.isHaciaIzquierda() ? "IZQUIERDA" : "DERECHA");
             serverThread.sendMessageToAll(msg);
         }
+
+        Boss boss = salaActual.getBoss();
+        if (boss != null && !boss.debeEliminarse()) {
+            String msgBoss = "Update:Boss:0:" +
+                boss.getPosicion().x + ":" +
+                boss.getPosicion().y + ":" +
+                boss.getEstado().name() + ":" +
+                (boss.isHaciaIzquierda() ? "IZQUIERDA" : "DERECHA");
+            serverThread.sendMessageToAll(msgBoss);
+        }
     }
 
 
@@ -268,8 +278,18 @@ public class PantallaJuego extends Pantalla implements GameController {
             enviarEnemigosASala(destinoId);
         }
 
+        if (destinoId.equalsIgnoreCase("sala5")) {
+            salaActual.generarBoss();
+            Boss boss = salaActual.getBoss();
 
-
+            if (boss != null) {
+                String msgBoss = "SpawnBoss:" +
+                    boss.getPosicion().x + ":" +
+                    boss.getPosicion().y;
+                serverThread.sendMessageToAll(msgBoss);
+                System.out.println("👑 Boss enviado a clientes: " + msgBoss);
+            }
+        }
 
         if (salaActual.getEnemigos() != null && !salaActual.getEnemigos().isEmpty()) {
             StringBuilder datosEnemigos = new StringBuilder();
