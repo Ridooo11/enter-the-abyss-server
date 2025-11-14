@@ -41,6 +41,8 @@ public class Jugador {
     private int monedas = 0;
     private int danioBase = 5;
 
+    private boolean yaGolpeo = false;
+
     // Estado
     private Accion accionActual = Accion.ESTATICO;
     private Direccion direccionActual = Direccion.ABAJO;
@@ -197,6 +199,7 @@ public class Jugador {
     public void procesarAtaque() {
         if (tiempoUltimoAtaque >= cooldownAtaque && accionActual != Accion.MUERTE) {
             accionActual = Accion.ATAQUE;
+            resetGolpe();
             tiempoUltimoAtaque = 0;
             actualizarHitboxAtaque();
         }
@@ -352,6 +355,9 @@ public class Jugador {
     public void setMonedas(int monedas) { this.monedas = Math.max(0, monedas); }
     public void modificarMonedas(int cantidad) { setMonedas(this.monedas + cantidad); }
 
+    public void resetGolpe() { yaGolpeo = false; }
+    public boolean puedeGolpear() { return !yaGolpeo; }
+    public void marcarGolpe() { yaGolpeo = true; }
 
     public float getAncho() {
         return this.ancho;

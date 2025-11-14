@@ -185,7 +185,7 @@ public class PantallaJuego extends Pantalla implements GameController {
         // Obtener el frame del sprite (fila 0, columna 0 = idle mirando abajo)
         TextureRegion frameJugador = new TextureRegion(spriteJugador, 0, 0, 48, 48);
 
-        // Aplicar color según el número de jugador
+        // Aplicar color según el número de jugadores
         Color color = jugador.getNumeroJugador() == 1 ? Color.BLUE : Color.RED;
         batch.setColor(color);
 
@@ -349,14 +349,19 @@ public class PantallaJuego extends Pantalla implements GameController {
 
 
 
-            //aca esta el problema de las monedas, no se elimina al instante al enemigo y queda como pegandole, por cada tick le da 10 monedas mas
+            //aca está el problema de las monedas, no se elimina al instante al enemigo y queda como pegándole, por cada tick le da 10 monedas más
             for (int i = enemigos.size() - 1; i >= 0; i--) {
                 Enemigo enemigo = enemigos.get(i);
                 if (!enemigo.debeEliminarse() && hitboxAtaque.overlaps(enemigo.getRectangulo())) {
-                    enemigo.recibirDanio(jugador.getDanio());
+                    if (jugador.puedeGolpear()) {
+                        enemigo.recibirDanio(jugador.getDanio());
+                        jugador.marcarGolpe();
+                    }
+
 
                     // ✅ SI EL ENEMIGO MUERE, DAR MONEDAS
-                    if (enemigo.getVida() <= 0) {
+                    if (enemigo.getVida() <= 0 && !enemigo.isRewardGiven()) {
+                        enemigo.setRewardGiven(true);  // SOLO UNA VEZ
                         int monedasGanadas = 10; // Puedes ajustar esto
                         jugador.modificarMonedas(monedasGanadas);
 

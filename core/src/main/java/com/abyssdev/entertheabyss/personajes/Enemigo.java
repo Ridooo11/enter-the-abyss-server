@@ -31,6 +31,10 @@ public class Enemigo {
     protected int vida = 30;
     protected int vidaMaxima = 30;
 
+    private boolean rewardGiven = false;
+
+
+
     protected Animation<TextureRegion> animIdle;
     protected Animation<TextureRegion> animCaminar;
     protected Animation<TextureRegion> animAtacar;
@@ -260,4 +264,8 @@ public class Enemigo {
     public int getDanio() {
         return this.danio;
     }
+
+
+    public boolean isRewardGiven() { return rewardGiven; }
+    public void setRewardGiven(boolean value) { rewardGiven = value; }
 }
