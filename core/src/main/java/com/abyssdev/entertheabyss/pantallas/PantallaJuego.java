@@ -135,7 +135,7 @@ public class PantallaJuego extends Pantalla implements GameController {
                     enemigo.recibirDanio(jugador.getDanio());
 
                     // ✅ SI EL ENEMIGO MUERE, DAR MONEDAS
-                    if (enemigo.debeEliminarse()) {
+                    if (enemigo.getVida() <= 0) {
                         int monedasGanadas = 10; // Puedes ajustar esto
                         jugador.modificarMonedas(monedasGanadas);
 
