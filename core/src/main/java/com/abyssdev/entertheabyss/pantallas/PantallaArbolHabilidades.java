@@ -462,7 +462,6 @@ public class PantallaArbolHabilidades extends Pantalla {
     public void dispose() {
         batch.dispose();
         shapeRenderer.dispose();
-        font.dispose();
         fondo.dispose();
     }
 }

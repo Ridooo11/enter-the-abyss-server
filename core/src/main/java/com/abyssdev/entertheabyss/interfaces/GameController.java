@@ -11,4 +11,5 @@ public interface GameController {
     void comprarHabilidad(int numPlayer, String nombreHabilidad);
 
     void playerDied(int numPlayer);
+    void resetearServidorCompleto();
 }

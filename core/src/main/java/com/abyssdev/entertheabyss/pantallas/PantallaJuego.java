@@ -18,6 +18,7 @@ public class PantallaJuego extends Pantalla implements GameController {
     // 🌐 Red
     private ServerThread serverThread;
     private boolean juegoIniciado = false;
+    private boolean servidorActivo = false;
 
     // 🗺️ Mundo
     private Mapa mapaActual;
@@ -37,7 +38,13 @@ public class PantallaJuego extends Pantalla implements GameController {
 
     @Override
     public void show() {
+        if (servidorActivo) {
+            System.out.println("⚠️ Servidor ya activo, reiniciando...");
+            limpiarCompletamente();
+        }
         System.out.println("🖥️ Servidor iniciado");
+        servidorActivo = true;
+
         serverThread = new ServerThread(this);
         serverThread.start();
 
@@ -382,7 +389,6 @@ public class PantallaJuego extends Pantalla implements GameController {
     @Override public void enemyKilled(int n, int id) {}
     @Override public void bossKilled(int n) {}
     @Override public void changeRoom(int n, String roomId) { cambiarSala(roomId);}
-    @Override public void timeOut() { serverThread.disconnectClients(); }
     @Override
     public void playerDied(int numPlayer) {
         juegoIniciado = false;
@@ -452,9 +458,112 @@ public class PantallaJuego extends Pantalla implements GameController {
     }
 
     @Override
+    public void timeOut() {
+        System.out.println("⏱️ TimeOut llamado - Reseteando servidor");
+        resetearServidorCompleto();
+    }
+
+    @Override
+    public void resetearServidorCompleto() {
+        System.out.println("🔄 ========== RESETEO COMPLETO DEL SERVIDOR ==========");
+
+        // 1. Detener el juego
+        juegoIniciado = false;
+
+        // 2. Limpiar jugadores
+        if (jugadores != null) {
+            jugadores.clear();
+        }
+
+        // 3. REGENERAR TODAS LAS SALAS (esto limpia enemigos, puertas, etc.)
+        if (mapaActual != null) {
+            mapaActual.regenerarTodasLasSalas();
+        }
+
+        // 4. Volver a la sala inicial
+        if (mapaActual != null && mapaActual.getSala("sala1") != null) {
+            salaActual = mapaActual.getSala("sala1");
+            mapaActual.establecerSalaActual("sala1");
+
+            // ✅ REGENERAR ENEMIGOS DE LA SALA INICIAL
+            System.out.println("👾 Generando enemigos iniciales de sala1...");
+            salaActual.generarEnemigos();
+        }
+
+        // 5. Resetear timers
+        tiempoAcumulado = 0f;
+
+        System.out.println("✅ Servidor reseteado completamente");
+        System.out.println("👥 Esperando " + MAX_JUGADORES + " jugadores...");
+        System.out.println("====================================================");
+    }
+
+    private void limpiarCompletamente() {
+        System.out.println("🧹 Limpiando estado del servidor...");
+
+        // 1. Detener thread de red
+        if (serverThread != null) {
+            serverThread.disconnectAllClients();
+            serverThread.terminate();
+            try {
+                serverThread.join(1000); // Esperar máximo 1 segundo
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            serverThread = null;
+        }
+
+        // 2. Limpiar jugadores
+        if (jugadores != null) {
+            jugadores.clear();
+        }
+
+        // 3. Limpiar mapa y salas (CRÍTICO)
+        if (mapaActual != null) {
+            mapaActual.dispose();
+            mapaActual = null;
+        }
+
+
+        // 4. Resetear estado
+        juegoIniciado = false;
+        salaActual = null;
+        tiempoAcumulado = 0f;
+
+        System.out.println("✅ Estado del servidor limpiado");
+    }
+
+    @Override
     public void dispose() {
-        if (serverThread != null) serverThread.terminate();
-        if (mapaActual != null) mapaActual.dispose();
+        System.out.println("🔴 Dispose de PantallaJuego (SERVIDOR)");
+
+        // Detener servidor
+        if (serverThread != null) {
+            serverThread.disconnectAllClients();
+            serverThread.terminate();
+
+            try {
+                serverThread.join(1000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+
+        // Limpiar mapa
+        if (mapaActual != null) {
+            mapaActual.dispose();
+        }
+    }
+
+    public void resetearJuego() {
+        System.out.println("🔄 Reseteando juego completo...");
+
+        limpiarCompletamente();
+
+        // Volver al menú
+        Gdx.app.postRunnable(() -> {
+            juego.setScreen(new MenuInicio(juego, batch));
+        });
     }
 
     public Sala getSalaActual() { return salaActual; }

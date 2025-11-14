@@ -1,5 +1,3 @@
-// Modificar PantallaGameOver.java:
-
 package com.abyssdev.entertheabyss.pantallas;
 
 import com.abyssdev.entertheabyss.ui.FontManager;
@@ -33,8 +31,17 @@ public class PantallaGameOver extends Pantalla {
     private Viewport viewport;
     private OrthographicCamera camara;
 
+    // ✅ AGREGAR REFERENCIA A PANTALLA JUEGO PARA LIMPIAR CONEXIÓN
+    private PantallaJuego pantallaJuegoAnterior;
+
     public PantallaGameOver(Game juego, SpriteBatch batch) {
         super(juego, batch);
+    }
+
+    // ✅ NUEVO CONSTRUCTOR CON REFERENCIA
+    public PantallaGameOver(Game juego, SpriteBatch batch, PantallaJuego pantallaJuego) {
+        super(juego, batch);
+        this.pantallaJuegoAnterior = pantallaJuego;
     }
 
     @Override
@@ -115,32 +122,54 @@ public class PantallaGameOver extends Pantalla {
         if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
             switch (opcionSeleccionada) {
                 case 0: // Volver al Menu
-                    Sonidos.detenerTodaMusica();
-                    Sonidos.reproducirMusicaMenu();
-
-                    // ✅ LLAMAR AL DISPOSE DE LA PANTALLA ANTERIOR PARA DESCONECTAR
-                    if (juego.getScreen() != null) {
-                        juego.getScreen().dispose();
-                    }
-
-                    juego.setScreen(new MenuInicio(juego, batch));
+                    volverAlMenu();
                     break;
 
                 case 1: // Salir
-                    // ✅ DESCONECTAR ANTES DE SALIR
-                    if (juego.getScreen() != null) {
-                        juego.getScreen().dispose();
-                    }
-                    Gdx.app.exit();
+                    salirDelJuego();
                     break;
             }
         }
+    }
+
+    private void volverAlMenu() {
+        System.out.println("🔙 Volviendo al menú desde GameOver");
+
+        Sonidos.detenerTodaMusica();
+        Sonidos.reproducirMusicaMenu();
+
+        // Limpiar pantalla actual (desconectar servidor/cliente)
+        if (juego.getScreen() != null) {
+            juego.getScreen().dispose();
+        }
+
+        juego.setScreen(new MenuInicio(juego, batch));
+    }
+
+    /**
+     * ✅ NUEVO: Manejo limpio de salida
+     */
+    private void salirDelJuego() {
+        System.out.println("👋 Saliendo del juego desde GameOver");
+
+        // Desconectar antes de salir
+        if (juego.getScreen() != null) {
+            juego.getScreen().dispose();
+        }
+
+        Gdx.app.exit();
     }
 
     @Override
     public void dispose() {
         if (fondoPausa != null) {
             fondoPausa.dispose();
+        }
+
+        // ✅ ASEGURAR LIMPIEZA AL SALIR DE ESTA PANTALLA
+        if (pantallaJuegoAnterior != null) {
+            pantallaJuegoAnterior.dispose();
+            pantallaJuegoAnterior = null;
         }
     }
 }

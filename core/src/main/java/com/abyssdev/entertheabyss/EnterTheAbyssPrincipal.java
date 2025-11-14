@@ -27,12 +27,38 @@ public class EnterTheAbyssPrincipal extends Game {
         Sonidos.setVolumenMusica(volumenMusica);
         Sonidos.setVolumenEfectos(volumenEfectos);
 
+        Gdx.app.addLifecycleListener(new com.badlogic.gdx.LifecycleListener() {
+            @Override
+            public void pause() {}
+
+            @Override
+            public void resume() {}
+
+            @Override
+            public void dispose() {
+                System.out.println("❌ Ventana cerrada - Limpiando recursos");
+
+                // Asegurar que la pantalla actual se dispose correctamente
+                if (getScreen() != null) {
+                    getScreen().dispose();
+                }
+            }
+        });
+
+
         // Arrancar en el menú
         setScreen(new MenuInicio(this,batch));
     }
 
     @Override
     public void dispose() {
+        System.out.println("🔴 Dispose del juego principal");
+
+        // Limpiar pantalla actual
+        if (getScreen() != null) {
+            getScreen().dispose();
+        }
+
         batch.dispose();
         Sonidos.dispose();
     }

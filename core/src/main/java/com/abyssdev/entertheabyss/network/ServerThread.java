@@ -6,6 +6,7 @@ import com.abyssdev.entertheabyss.pantallas.Pantalla;
 import com.abyssdev.entertheabyss.pantallas.PantallaJuego;
 import com.abyssdev.entertheabyss.pantallas.PantallaJuego;
 import com.abyssdev.entertheabyss.personajes.Enemigo;
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.math.Rectangle;
 
 import java.io.IOException;
@@ -71,19 +72,10 @@ public class ServerThread extends Thread {
             case "Disconnect":
                 InetAddress address = packet.getAddress();
                 int port = packet.getPort();
-                System.out.println("🔌 Cliente desconectado: " + address + ":" + port);
+                System.out.println("🔌 Cliente solicitó desconexión: " + address + ":" + port);
 
-                int playerIndex = findPlayerIndex(address, port);
-                if (playerIndex != -1) {
-                    Client disconnectedClient = clients.get(playerIndex);
-                    System.out.println("🧹 Eliminando cliente " + disconnectedClient.getNum());
 
-                    clients.remove(playerIndex); // ✅ elimina el objeto del ArrayList
-                    connectedClients = Math.max(connectedClients - 1, 0);
-
-                } else {
-                    System.out.println("⚠️ Cliente no encontrado para eliminar");
-                }
+                desconectarCliente(address, port);
                 break;
 
 
@@ -281,21 +273,74 @@ public class ServerThread extends Thread {
     }
 
 
-    public void disconnectClients() {
-        System.out.println("🔌 Desconectando todos los clientes");
+    public void desconectarCliente(InetAddress address, int port) {
+        System.out.println("🔌 Desconectando cliente: " + address + ":" + port);
 
-        for (Client client : clients) {
-            sendMessage("Disconnect", client.getIp(), client.getPort());
+        int playerIndex = findPlayerIndex(address, port);
+        if (playerIndex == -1) {
+            System.out.println("⚠️ Cliente no encontrado para desconectar (ya fue removido)");
+            return;
         }
 
-        for (int i = 0; i < clients.size(); i++) {
-                clients.remove(i);
-                connectedClients--;
-                System.out.println("🔌 Cliente " + i + " desconectado. Clientes restantes: " + connectedClients);
+        Client clienteDesconectado = clients.get(playerIndex);
+        int numPlayerDesconectado = clienteDesconectado.getNum();
+
+        // Remover cliente de la lista
+        clients.remove(playerIndex);
+        connectedClients = Math.max(connectedClients - 1, 0);
+
+        System.out.println("✅ Jugador " + numPlayerDesconectado + " desconectado");
+        System.out.println("👥 Clientes restantes: " + connectedClients);
+
+        // ✅ IMPORTANTE: Notificar al OTRO jugador que su oponente se desconectó
+        if (clients.size() > 0) {
+            System.out.println("📢 Notificando a jugadores restantes sobre desconexión de jugador " + numPlayerDesconectado);
+            sendMessageToAll("WingmanDisconnected:" + numPlayerDesconectado);
+
+            // Dar tiempo para que el mensaje llegue, luego desconectar a todos
+            new Thread(() -> {
+                try {
+                    Thread.sleep(500);
+                    System.out.println("🔴 Forzando desconexión de jugadores restantes");
+                    disconnectAllClients();
+
+                    // ✅ RESETEAR EL SERVIDOR
+                    if (gameController != null) {
+                        Gdx.app.postRunnable(() -> {
+                            gameController.resetearServidorCompleto();
+                        });
+                    }
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }).start();
+        } else {
+            // ✅ Si no quedan clientes, resetear directamente
+            System.out.println("📭 No quedan clientes conectados");
+            if (gameController != null) {
+                Gdx.app.postRunnable(() -> {
+                    gameController.resetearServidorCompleto();
+                });
+            }
+        }
+    }
+
+    /**
+     * ✅ NUEVO: Desconecta a TODOS los clientes y limpia
+     */
+    public void disconnectAllClients() {
+        System.out.println("🔌 Desconectando TODOS los clientes");
+
+        // Enviar mensaje de desconexión a cada cliente
+        for (Client client : new ArrayList<>(clients)) {
+            sendMessage("ForceDisconnect", client.getIp(), client.getPort());
         }
 
+        // Limpiar la lista
         clients.clear();
         connectedClients = 0;
+
+        System.out.println("✅ Todos los clientes desconectados");
     }
 
     public void terminate() {

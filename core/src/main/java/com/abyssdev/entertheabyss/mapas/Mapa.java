@@ -25,6 +25,16 @@ public class Mapa {
         salaActual = salas.get(salaId);
     }
 
+    public void regenerarTodasLasSalas() {
+        System.out.println("🔄 Regenerando todas las salas del mapa " + id);
+
+        for (Sala sala : salas.values()) {
+            sala.regenerarSala();
+        }
+
+        System.out.println("✅ Todas las salas regeneradas");
+    }
+
     public Sala getSalaActual() { return salaActual; }
     public Sala getSala(String id) { return salas.get(id); }
     public String getId() { return id; }

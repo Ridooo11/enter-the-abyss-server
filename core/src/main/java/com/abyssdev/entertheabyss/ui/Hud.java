@@ -35,7 +35,6 @@ public class Hud {
         this.heart25 = new Texture("imagenes/corazon25%.png");
         this.moneda = new Texture("imagenes/moneda.png");
         this.font = FontManager.getInstance().getPequena();
-        this.font.getData().setScale(0.9f);
         this.layout = new GlyphLayout();
     }
 
@@ -99,8 +98,10 @@ public class Hud {
         font.setColor(com.badlogic.gdx.graphics.Color.YELLOW);
         font.draw(batch, textoMonedas, textoX, textoY);
 
-        batch.end();
+        viewport.apply();
         batch.setProjectionMatrix(originalProjection);
+        batch.end();
+
     }
 
     public void dispose() {
@@ -118,9 +119,6 @@ public class Hud {
         }
         if (moneda != null) {
             moneda.dispose();
-        }
-        if (font != null) {
-            font.dispose();
         }
         // ✅ GlyphLayout no necesita dispose()
     }

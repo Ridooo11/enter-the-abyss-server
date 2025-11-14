@@ -38,11 +38,13 @@ public class Sala {
     private float anchoTiles, altoTiles;
     private static final float TILE_SIZE = 16f;
     private ServerThread serverThread;
+    private int cantidadEnemigosInicial;
 
 
     public Sala(String id, String rutaTmx, int cantidadEnemigos, ServerThread serverThread) {
         this.id = id;
         this.cantidadEnemigos = cantidadEnemigos;
+        this.cantidadEnemigosInicial = cantidadEnemigos;
         this.serverThread = serverThread;
         cargarMapa(rutaTmx);
         cargarColisiones();
@@ -100,6 +102,36 @@ public class Sala {
 
         System.out.println("✅ Sala " + id + " - Colisiones estáticas: " + colisionesEstaticas.size);
         System.out.println("✅ Sala " + id + " - Colisiones dinámicas (puertas): " + colisionesDinamicas.size);
+    }
+
+    public void regenerarSala() {
+        System.out.println("🔄 Regenerando sala " + id);
+
+        // Limpiar enemigos existentes
+        if (enemigos != null) {
+            enemigos.clear();
+        }
+        enemigos = null;
+
+        // Limpiar boss
+        bossFinal = null;
+        bossGenerado = false;
+
+        // Cerrar puertas
+        if (puertas != null) {
+            for (Puerta puerta : puertas) {
+                if (puerta.estaAbierta()) {
+                    puerta.cerrar();
+                }
+            }
+        }
+
+        // Reconstruir colisiones
+        actualizarColisiones();
+
+        enemigosGenerados = false;
+
+        System.out.println("✅ Sala " + id + " regenerada");
     }
 
     private void cargarPuertas() {

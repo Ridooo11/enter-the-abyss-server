@@ -2,6 +2,7 @@ package com.abyssdev.entertheabyss.pantallas;
 
 import com.abyssdev.entertheabyss.EnterTheAbyssPrincipal;
 import com.abyssdev.entertheabyss.ui.FontManager;
+import com.abyssdev.entertheabyss.ui.Sonidos;
 import com.badlogic.gdx.Game;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
@@ -122,7 +123,7 @@ public class PantallaPausa extends Pantalla {
                     juego.setScreen(new PantallaTutorial(juego, batch, this));
                     break;
                 case 3:
-                    juego.setScreen(new MenuInicio(juego, batch));
+                    salirAlMenu();
                     break;
             }
         }
@@ -130,6 +131,18 @@ public class PantallaPausa extends Pantalla {
         if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
             juego.setScreen(pantallaJuego);
         }
+    }
+
+    private void salirAlMenu() {
+        System.out.println("🔙 Saliendo al menú desde pausa");
+
+        Sonidos.detenerTodaMusica();
+        Sonidos.reproducirMusicaMenu();
+
+
+        pantallaJuego.dispose();
+
+        juego.setScreen(new MenuInicio(juego, batch));
     }
 
     @Override
