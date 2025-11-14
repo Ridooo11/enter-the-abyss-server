@@ -6,9 +6,15 @@ import com.abyssdev.entertheabyss.personajes.*;
 import com.abyssdev.entertheabyss.network.ServerThread;
 import com.badlogic.gdx.Game;
 import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.graphics.GL20;
+import com.badlogic.gdx.graphics.*;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
+import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Rectangle;
+import com.badlogic.gdx.utils.viewport.FitViewport;
+import com.badlogic.gdx.utils.viewport.Viewport;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -32,6 +38,13 @@ public class PantallaJuego extends Pantalla implements GameController {
     private float tiempoAcumulado = 0f;
     private static final float TICK_RATE = 1f / 30f; // 30 FPS lógica
 
+    // 🎨 NUEVO: Renderizado del servidor
+    private OrthographicCamera camara;
+    private Viewport viewport;
+    private BitmapFont font;
+    private Texture texturaFade;
+    private Texture spriteJugador;
+
     public PantallaJuego(Game juego, SpriteBatch batch) {
         super(juego, batch);
     }
@@ -44,6 +57,17 @@ public class PantallaJuego extends Pantalla implements GameController {
         }
         System.out.println("🖥️ Servidor iniciado");
         servidorActivo = true;
+
+        camara = new OrthographicCamera();
+        viewport = new FitViewport(32, 32 * (9f / 16f), camara);
+        viewport.apply();
+
+        font = new BitmapFont();
+        font.getData().setScale(2f);
+        font.setColor(Color.WHITE);
+
+        texturaFade = generarTextura();
+        spriteJugador = new Texture("personajes/player.png");
 
         serverThread = new ServerThread(this);
         serverThread.start();
@@ -72,10 +96,13 @@ public class PantallaJuego extends Pantalla implements GameController {
         Gdx.gl.glClearColor(0.1f, 0.1f, 0.15f, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
-        if (!juegoIniciado) return;
+        // 🎨 NUEVO: Renderizar estado del servidor
+        if (!juegoIniciado) {
+            renderizarPantallaEspera();
+            return;
+        }
 
-
-
+        // Actualizar lógica del juego
         tiempoAcumulado += delta;
         while (tiempoAcumulado >= TICK_RATE) {
             actualizarLogicaJuego(TICK_RATE);
@@ -84,7 +111,198 @@ public class PantallaJuego extends Pantalla implements GameController {
 
         enviarActualizaciones();
 
+        // 🎨 NUEVO: Renderizar el juego
+        renderizarJuego(delta);
+    }
 
+    // 🎨 NUEVO: Método para renderizar pantalla de espera
+    private void renderizarPantallaEspera() {
+        batch.begin();
+
+        String texto1 = "SERVIDOR ACTIVO";
+        String texto2 = "Esperando " + (MAX_JUGADORES - serverThread.getConnectedClients()) + " jugador(es)...";
+        String texto3 = "Jugadores conectados: " + serverThread.getConnectedClients() + "/" + MAX_JUGADORES;
+
+        font.setColor(Color.GREEN);
+        font.draw(batch, texto1,
+            Gdx.graphics.getWidth() / 2f - 150,
+            Gdx.graphics.getHeight() / 2f + 50);
+
+        font.setColor(Color.YELLOW);
+        font.draw(batch, texto2,
+            Gdx.graphics.getWidth() / 2f - 200,
+            Gdx.graphics.getHeight() / 2f);
+
+        font.setColor(Color.WHITE);
+        font.draw(batch, texto3,
+            Gdx.graphics.getWidth() / 2f - 150,
+            Gdx.graphics.getHeight() / 2f - 50);
+
+        batch.end();
+    }
+
+    // 🎨 NUEVO: Método para renderizar el juego
+    private void renderizarJuego(float delta) {
+        // Actualizar cámara para seguir al primer jugador
+        actualizarCamara();
+
+        // Renderizar mapa
+        salaActual.getRenderer().setView(camara);
+        salaActual.getRenderer().render();
+
+        batch.setProjectionMatrix(camara.combined);
+        batch.begin();
+
+        // Renderizar enemigos
+        ArrayList<Enemigo> enemigos = salaActual.getEnemigos();
+        if (enemigos != null) {
+            for (Enemigo enemigo : enemigos) {
+                if (!enemigo.debeEliminarse()) {
+                    enemigo.renderizar(batch);
+                }
+            }
+        }
+
+        // Renderizar boss
+        Boss boss = salaActual.getBoss();
+        if (boss != null && !boss.debeEliminarse()) {
+            boss.renderizar(batch);
+        }
+
+        // Renderizar jugadores (solo visuales)
+        for (Jugador jugador : jugadores.values()) {
+            dibujarJugadorServidor(jugador);
+        }
+
+        batch.end();
+
+        // Renderizar UI de debug
+        renderizarDebugUI();
+    }
+
+    // 🎨 NUEVO: Dibujar jugador en el servidor
+    private void dibujarJugadorServidor(Jugador jugador) {
+        // Obtener el frame del sprite (fila 0, columna 0 = idle mirando abajo)
+        TextureRegion frameJugador = new TextureRegion(spriteJugador, 0, 0, 48, 48);
+
+        // Aplicar color según el número de jugador
+        Color color = jugador.getNumeroJugador() == 1 ? Color.BLUE : Color.RED;
+        batch.setColor(color);
+
+        // Dibujar el sprite del jugador
+        batch.draw(frameJugador,
+            jugador.getX(),
+            jugador.getY(),
+            jugador.getAncho(),
+            jugador.getAlto());
+
+        // Restaurar color blanco
+        batch.setColor(Color.WHITE);
+
+        // Dibujar etiqueta "P1" o "P2" encima del jugador (más pequeño)
+        font.getData().setScale(0.1f); // Más pequeño que antes (era 0.5f)
+
+        // Color del texto según el jugador
+        font.setColor(jugador.getNumeroJugador() == 1 ? Color.CYAN : Color.YELLOW);
+
+        // Centrar el texto sobre el jugador
+        String etiqueta = "P" + jugador.getNumeroJugador();
+        GlyphLayout layout = new GlyphLayout(font, etiqueta);
+        float textX = jugador.getX() + (jugador.getAncho() / 2f) - (layout.width / 2f);
+        float textY = jugador.getY() + jugador.getAlto() + 0.5f; // Encima del jugador
+
+        font.draw(batch, etiqueta, textX, textY);
+
+        // Restaurar escala del font
+        font.getData().setScale(2f);
+    }
+
+    // 🎨 NUEVO: UI de debug para el servidor
+    private void renderizarDebugUI() {
+        batch.getProjectionMatrix().setToOrtho2D(0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+        batch.begin();
+
+        font.getData().setScale(1f);
+        font.setColor(Color.CYAN);
+
+        int y = Gdx.graphics.getHeight() - 20;
+        int lineHeight = 25;
+
+        font.draw(batch, "=== SERVIDOR DEBUG ===", 10, y);
+        y -= lineHeight;
+
+        font.draw(batch, "Sala: " + salaActual.getId(), 10, y);
+        y -= lineHeight;
+
+        font.draw(batch, "Jugadores: " + jugadores.size(), 10, y);
+        y -= lineHeight;
+
+        ArrayList<Enemigo> enemigos = salaActual.getEnemigos();
+        int enemigosVivos = 0;
+        if (enemigos != null) {
+            for (Enemigo e : enemigos) {
+                if (!e.debeEliminarse()) enemigosVivos++;
+            }
+        }
+        font.draw(batch, "Enemigos vivos: " + enemigosVivos, 10, y);
+        y -= lineHeight;
+
+        Boss boss = salaActual.getBoss();
+        if (boss != null) {
+            font.draw(batch, "Boss: " + (boss.debeEliminarse() ? "Muerto" : "Vida: " + boss.getVida()), 10, y);
+            y -= lineHeight;
+        }
+
+        for (Jugador jugador : jugadores.values()) {
+            font.draw(batch, "P" + jugador.getNumeroJugador() +
+                " - Vida: " + jugador.getVida() +
+                " - Pos: (" + (int)jugador.getX() + "," + (int)jugador.getY() + ")", 10, y);
+            y -= lineHeight;
+        }
+
+        font.getData().setScale(2f);
+        batch.end();
+    }
+
+    // 🎨 NUEVO: Actualizar cámara
+    private void actualizarCamara() {
+        if (jugadores.isEmpty()) return;
+
+        Jugador jugadorASeguir = jugadores.values().iterator().next();
+
+        float halfWidth = camara.viewportWidth / 2f;
+        float halfHeight = camara.viewportHeight / 2f;
+
+        float x = jugadorASeguir.getX();
+        float y = jugadorASeguir.getY();
+
+        float limiteIzquierdo = halfWidth;
+        float limiteDerecho = Math.max(limiteIzquierdo, salaActual.getAnchoMundo() - halfWidth);
+        float limiteInferior = halfHeight;
+        float limiteSuperior = Math.max(limiteInferior, salaActual.getAltoMundo() - halfHeight);
+
+        x = MathUtils.clamp(x, limiteIzquierdo, limiteDerecho);
+        y = MathUtils.clamp(y, limiteInferior, limiteSuperior);
+
+        camara.position.set(x, y, 0);
+        camara.update();
+    }
+
+    // 🎨 NUEVO: Generar textura simple
+    private Texture generarTextura() {
+        Pixmap pixmap = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
+        pixmap.setColor(Color.WHITE);
+        pixmap.fill();
+        Texture textura = new Texture(pixmap);
+        pixmap.dispose();
+        return textura;
+    }
+
+    @Override
+    public void resize(int width, int height) {
+        viewport.update(width, height, true);
+        camara.position.set(camara.viewportWidth / 2f, camara.viewportHeight / 2f, 0);
+        camara.update();
     }
 
     private void actualizarLogicaJuego(float delta) {
@@ -463,6 +681,7 @@ public class PantallaJuego extends Pantalla implements GameController {
         resetearServidorCompleto();
     }
 
+
     @Override
     public void resetearServidorCompleto() {
         System.out.println("🔄 ========== RESETEO COMPLETO DEL SERVIDOR ==========");
@@ -552,6 +771,13 @@ public class PantallaJuego extends Pantalla implements GameController {
         // Limpiar mapa
         if (mapaActual != null) {
             mapaActual.dispose();
+        }
+
+        if (texturaFade != null) {
+            texturaFade.dispose();
+        }
+        if (spriteJugador != null) {
+            spriteJugador.dispose();
         }
     }
 
