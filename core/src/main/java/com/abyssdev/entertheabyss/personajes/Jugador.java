@@ -327,22 +327,22 @@ public class Jugador {
     }
 
     // ==================== GETTERS ====================
-    public int getNumeroJugador() { return numeroJugador; }
-    public float getX() { return posicion.x; }
-    public float getY() { return posicion.y; }
-    public Vector2 getPosicion() { return posicion; }
-    public int getVida() { return vida; }
-    public int getVidaMaxima() { return vidaMaxima; }
-    public int getMonedas() { return monedas; }
-    public int getDanio() { return danioBase; }
-    public Accion getAccionActual() { return accionActual; }
-    public Direccion getDireccionActual() { return direccionActual; }
-    public Rectangle getHitboxAtaque() { return hitboxAtaque; }
+    public int getNumeroJugador() { return this.numeroJugador; }
+    public float getX() { return this.posicion.x; }
+    public float getY() { return this.posicion.y; }
+    public Vector2 getPosicion() { return this.posicion; }
+    public int getVida() { return this.vida; }
+    public int getVidaMaxima() { return this.vidaMaxima; }
+    public int getMonedas() { return this.monedas; }
+    public int getDanio() { return this.danioBase; }
+    public Accion getAccionActual() { return this.accionActual; }
+    public Direccion getDireccionActual() { return this.direccionActual; }
+    public Rectangle getHitboxAtaque() { return this.hitboxAtaque; }
     public Rectangle getHitbox() {
         return new Rectangle(posicion.x + offsetHitboxX, posicion.y + offsetHitboxY, anchoHitbox, altoHitbox);
     }
     public Map<String, Habilidad> getHabilidades() {
-        return habilidades;
+        return this.habilidades;
     }
 
     // ==================== SETTERS ====================

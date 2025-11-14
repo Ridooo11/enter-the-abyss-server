@@ -129,6 +129,9 @@ public class PantallaJuego extends Pantalla implements GameController {
             Rectangle hitboxAtaque = jugador.getHitboxAtaque();
             if (hitboxAtaque.getWidth() <= 0 || enemigos == null) continue;
 
+
+
+            //aca esta el problema de las monedas, no se elimina al instante al enemigo y queda como pegandole, por cada tick le da 10 monedas mas
             for (int i = enemigos.size() - 1; i >= 0; i--) {
                 Enemigo enemigo = enemigos.get(i);
                 if (!enemigo.debeEliminarse() && hitboxAtaque.overlaps(enemigo.getRectangulo())) {
