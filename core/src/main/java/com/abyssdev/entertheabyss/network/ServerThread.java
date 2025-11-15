@@ -125,6 +125,17 @@ public class ServerThread extends Thread {
                 }
                 break;
 
+            case "ComprarVida":
+                // ComprarVida:precio
+                if (clientIndex != -1 && parts.length >= 2) {
+                    Client client = clients.get(clientIndex);
+                    int precio = Integer.parseInt(parts[1]);
+
+                    // Validar y procesar compra
+                    gameController.comprarVida(client.getNum(), precio);
+                }
+                break;
+
             default:
                 if (clientIndex == -1) {
                     System.out.println("⚠️ Cliente no conectado intentando enviar: " + parts[0]);

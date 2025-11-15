@@ -12,4 +12,5 @@ public interface GameController {
 
     void playerDied(int numPlayer);
     void resetearServidorCompleto();
+    void comprarVida(int numPlayer, int precio);
 }

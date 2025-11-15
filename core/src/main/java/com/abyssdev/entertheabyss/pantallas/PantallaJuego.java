@@ -662,6 +662,56 @@ public class PantallaJuego extends Pantalla implements GameController {
         }
     }
 
+    @Override
+    public void comprarVida(int numPlayer, int precio) {
+        Jugador jugador = jugadores.get(numPlayer);
+        if (jugador == null) {
+            System.err.println("⚠️ Jugador " + numPlayer + " no encontrado para comprar vida");
+            return;
+        }
+
+        System.out.println("🛒 Jugador " + numPlayer + " intenta comprar vida por " + precio + " monedas");
+
+        // Validar monedas
+        if (jugador.getMonedas() < precio) {
+            System.out.println("❌ Jugador " + numPlayer + " no tiene suficientes monedas");
+            serverThread.sendMessage("CompraVidaFallida:Monedas insuficientes",
+                serverThread.getClientByNum(numPlayer).getIp(),
+                serverThread.getClientByNum(numPlayer).getPort());
+            return;
+        }
+
+        // Validar que no esté a vida máxima
+        if (jugador.getVida() >= jugador.getVidaMaxima()) {
+            System.out.println("❌ Jugador " + numPlayer + " ya tiene vida máxima");
+            serverThread.sendMessage("CompraVidaFallida:Vida ya está al máximo",
+                serverThread.getClientByNum(numPlayer).getIp(),
+                serverThread.getClientByNum(numPlayer).getPort());
+            return;
+        }
+
+        // ✅ Compra válida - Aplicar cambios
+        jugador.modificarMonedas(-precio);
+        int vidaAnterior = jugador.getVida();
+        jugador.setVida(Math.min(jugador.getVidaMaxima(), jugador.getVida() + 20));
+
+        int vidaNueva = jugador.getVida();
+        int monedasNuevas = jugador.getMonedas();
+
+        System.out.println("✅ Compra exitosa - Jugador " + numPlayer +
+            " - Vida: " + vidaAnterior + " → " + vidaNueva +
+            " - Monedas: " + (monedasNuevas + precio) + " → " + monedasNuevas);
+
+        // Enviar confirmación al comprador
+        serverThread.sendMessage("CompraVidaExitosa:" + vidaNueva + ":" + monedasNuevas,
+            serverThread.getClientByNum(numPlayer).getIp(),
+            serverThread.getClientByNum(numPlayer).getPort());
+
+        // ✅ Notificar a TODOS los clientes sobre los cambios (para sincronización)
+        serverThread.sendMessageToAll("UpdateHealth:" + numPlayer + ":" + vidaNueva);
+        serverThread.sendMessageToAll("UpdateCoins:" + numPlayer + ":" + monedasNuevas);
+    }
+
     public void actualizarMovimiento(int n, boolean up, boolean down, boolean left, boolean right) {
         Jugador j = jugadores.get(n);
         if (j == null) return;
