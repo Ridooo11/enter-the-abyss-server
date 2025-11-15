@@ -50,7 +50,7 @@ public class PantallaTienda extends Pantalla {
         camara.position.set(camara.viewportWidth / 2f, camara.viewportHeight / 2f, 0);
         camara.update();
 
-        fondoTienda = new Texture("Fondos/fondotienda.jpg");
+        fondoTienda = new Texture("Fondos/OgroTienda3.png");
         heart100 = new Texture("imagenes/corazon100%.png");
 
         layout = new GlyphLayout();
