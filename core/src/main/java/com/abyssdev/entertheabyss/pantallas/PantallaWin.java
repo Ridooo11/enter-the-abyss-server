@@ -34,6 +34,14 @@ public class PantallaWin extends Pantalla {
     private Viewport viewport;
     private OrthographicCamera camara;
 
+
+    // ✅ AGREGAR REFERENCIA A PANTALLA JUEGO PARA LIMPIAR CONEXIÓN
+    private PantallaJuego pantallaJuegoAnterior;
+
+    public PantallaWin(Game juego,SpriteBatch batch, PantallaJuego pantallaJuego ) {
+        super(juego,batch);
+        this.pantallaJuegoAnterior = pantallaJuego;
+    }
     public PantallaWin(Game juego,SpriteBatch batch) {
         super(juego,batch);
     }

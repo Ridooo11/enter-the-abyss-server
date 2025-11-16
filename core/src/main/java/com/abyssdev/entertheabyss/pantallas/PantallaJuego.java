@@ -84,7 +84,7 @@ public class PantallaJuego extends Pantalla implements GameController {
 
         // Inicializar mapa y salas
         mapaActual = new Mapa("mazmorra1");
-        mapaActual.agregarSala(new Sala("sala1", "maps/mapa1_sala1.tmx", 10, this.serverThread));
+        mapaActual.agregarSala(new Sala("sala1", "maps/mapa1_sala1.tmx", 4, this.serverThread));
         mapaActual.agregarSala(new Sala("sala2", "maps/mapa1_sala2.tmx", 1, this.serverThread));
         mapaActual.agregarSala(new Sala("sala3", "maps/mapa1_sala5.tmx", 1, this.serverThread));
         mapaActual.agregarSala(new Sala("sala4", "maps/mapa1_sala4.tmx", 1, this.serverThread));
@@ -370,8 +370,8 @@ public class PantallaJuego extends Pantalla implements GameController {
                     // ✅ SI EL ENEMIGO MUERE, DAR MONEDAS
                     if (enemigo.getVida() <= 0 && !enemigo.isRewardGiven()) {
                         enemigo.setRewardGiven(true);  // SOLO UNA VEZ
-                        int monedasGanadas = 10; // Puedes ajustar esto
-                        jugador.modificarMonedas(monedasGanadas+1000);
+                        int monedasGanadas = 1000; // Puedes ajustar esto
+                        jugador.modificarMonedas(monedasGanadas);
 
                         // ✅ ENVIAR ACTUALIZACIÓN DE MONEDAS A TODOS LOS CLIENTES
                         serverThread.sendMessageToAll("UpdateCoins:" +
@@ -385,44 +385,77 @@ public class PantallaJuego extends Pantalla implements GameController {
         }
 
 
+// ==================== BOSS ====================
         if (salaActual.getId().equalsIgnoreCase("sala5")) {
             Boss boss = salaActual.getBoss();
+
+            // Generar boss si no existe
             if (boss == null) {
                 salaActual.generarBoss();
-            } else if (!boss.debeEliminarse()) {
-                Jugador jugadorCercano = obtenerJugadorMasCercano(boss);
-                if (jugadorCercano != null) {
-                    boolean ataco = boss.actualizar(delta, jugadorCercano.getPosicion(),
-                        salaActual.getColisiones(), enemigos != null ? enemigos : new ArrayList<>());
-                    if (ataco) {
-                        jugadorCercano.recibirDanio(boss.getDanio());
-                        serverThread.sendMessageToAll("UpdateHealth:" +
-                            jugadorCercano.getNumeroJugador() + ":" + jugadorCercano.getVida());
+                boss = salaActual.getBoss(); // Obtener referencia al boss recién creado
+
+                if (boss != null) {
+                    String msgBoss = "SpawnBoss:" + boss.getPosicion().x + ":" + boss.getPosicion().y;
+                    serverThread.sendMessageToAll(msgBoss);
+                    System.out.println("👑 Boss spawneado y enviado a clientes");
+                }
+            }
+
+            // Si el boss existe (vivo o muriendo)
+            if (boss != null) {
+                // ✅ Actualizar boss SOLO si está vivo
+                if (!boss.debeEliminarse()) {
+                    Jugador jugadorCercano = obtenerJugadorMasCercano(boss);
+                    if (jugadorCercano != null) {
+                        boolean ataco = boss.actualizar(delta, jugadorCercano.getPosicion(),
+                            salaActual.getColisiones(), enemigos != null ? enemigos : new ArrayList<>());
+                        if (ataco) {
+                            jugadorCercano.recibirDanio(boss.getDanio());
+                            serverThread.sendMessageToAll("UpdateHealth:" +
+                                jugadorCercano.getNumeroJugador() + ":" + jugadorCercano.getVida());
+                        }
                     }
                 }
 
-
+                // ✅ IMPORTANTE: Procesar ataques AL BOSS (vivo o no)
                 for (Jugador jugador : jugadores.values()) {
                     Rectangle hitboxAtaque = jugador.getHitboxAtaque();
                     if (hitboxAtaque.getWidth() <= 0) continue;
 
-                    if (hitboxAtaque.overlaps(boss.getRectangulo())) {
-                        boss.recibirDanio(jugador.getDanio());
+                    // ✅ SOLO atacar si el boss AÚN NO está eliminado
+                    if (!boss.debeEliminarse() && hitboxAtaque.overlaps(boss.getRectangulo())) {
+                        if (jugador.puedeGolpear()) {
+                            boss.recibirDanio(jugador.getDanio());
+                            jugador.marcarGolpe();
+                        }
 
-
+                        // ✅ Verificar si el boss ACABA de morir
                         if (boss.debeEliminarse()) {
-                            int monedasGanadas = 50; // Boss da más monedas
-                            jugador.modificarMonedas(monedasGanadas);
+                            System.out.println("👑 Boss eliminado por jugador " + jugador.getNumeroJugador());
 
+                            // Dar monedas
+                            int monedasGanadas = 50;
+                            jugador.modificarMonedas(monedasGanadas);
                             serverThread.sendMessageToAll("UpdateCoins:" +
                                 jugador.getNumeroJugador() + ":" + jugador.getMonedas());
+
+                            // Notificar muerte del boss
                             serverThread.sendMessageToAll("BossDead");
-                            boolean noHayEnemigosVivos = salaActual.getEnemigos() == null || salaActual.getEnemigos().isEmpty();
-                            bossKilled(noHayEnemigosVivos);
 
+                            // ✅ Verificar si la sala está limpia
+                            boolean hayEnemigosVivos = salaActual.hayEnemigosVivos();
 
-                            System.out.println("👑 Jugador " + jugador.getNumeroJugador() +
+                            System.out.println("   📊 Estado de la sala:");
+                            System.out.println("      - Enemigos vivos: " + hayEnemigosVivos);
+
+                            // ✅ Llamar bossKilled con la lógica correcta
+                            bossKilled(!hayEnemigosVivos); // TRUE = sala limpia (sin enemigos)
+
+                            System.out.println("💰 Jugador " + jugador.getNumeroJugador() +
                                 " derrotó al Boss y ganó " + monedasGanadas + " monedas!");
+
+                            // Salir del bucle, ya procesamos la muerte
+                            break;
                         }
                     }
                 }
@@ -656,22 +689,28 @@ public class PantallaJuego extends Pantalla implements GameController {
         if (jugadores.get(numPlayer) != null) jugadores.get(numPlayer).procesarEvasion();
     }
     @Override public void enemyKilled(int n, int id) {}
-     public void bossKilled(boolean noHayEnemigosVivos) {
+    public void bossKilled(boolean salaLimpia) {
+        System.out.println("🔍 bossKilled() llamado:");
+        System.out.println("   - Sala limpia (sin enemigos): " + salaLimpia);
 
-        if(!noHayEnemigosVivos){
+        // ✅ Si NO está limpia, no enviar victoria
+        if (!salaLimpia) {
+            System.out.println("❌ Aún hay enemigos vivos, no enviar victoria");
             return;
         }
 
-        // Esperar 2 segundos antes de mostrar Game Over
+        System.out.println("✅ Sala limpia - Enviando WinGame en 2 segundos...");
+
+        // Esperar 2 segundos antes de mostrar victoria
         new Thread(() -> {
             try {
                 Thread.sleep(2000);
 
-                // Enviar señal de Game Over a todos los clientes
                 serverThread.sendMessageToAll("WinGame");
-                System.out.println("🎮 Win enviado a todos los clientes");
+                System.out.println("🎮 ✅ WinGame enviado a todos los clientes");
 
             } catch (InterruptedException e) {
+                System.err.println("❌ Error en thread de victoria: " + e.getMessage());
                 e.printStackTrace();
             }
         }).start();
