@@ -5,7 +5,6 @@ public interface GameController {
     void move(int numPlayer, float x, float y);
     void attack(int numPlayer);
     void enemyKilled(int numPlayer, int enemyId);
-    void bossKilled(int numPlayer);
     void changeRoom(int numPlayer, String roomId);
     void timeOut();
     void comprarHabilidad(int numPlayer, String nombreHabilidad);
@@ -13,4 +12,8 @@ public interface GameController {
     void playerDied(int numPlayer);
     void resetearServidorCompleto();
     void comprarVida(int numPlayer, int precio);
+
+    void enviarHabilidadesACliente(int numPlayer);
+
+    void hacerDash(int numPlayer);
 }

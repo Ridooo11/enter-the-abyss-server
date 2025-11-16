@@ -2,6 +2,7 @@ package com.abyssdev.entertheabyss.personajes;
 
 import com.abyssdev.entertheabyss.habilidades.*;
 import com.abyssdev.entertheabyss.logica.ManejoEntradas;
+import com.abyssdev.entertheabyss.network.ServerThread;
 import com.abyssdev.entertheabyss.personajes.Accion;
 import com.abyssdev.entertheabyss.personajes.Direccion;
 import com.abyssdev.entertheabyss.ui.Hud;
@@ -76,21 +77,100 @@ public class Jugador {
         this.posicion = new Vector2(x, y);
         this.hitboxAtaque = new Rectangle(0, 0, 0, 0);
 
+        // ✅ NUEVO: Inicializar habilidades
+        inicializarHabilidades();
+
+    }
+
+
+    // ✅ NUEVO MÉTODO (agregar después de la línea 100):
+    private void inicializarHabilidades() {
+        Gdx.app.postRunnable(new Runnable() {
+            @Override
+            public void run() {
+                habilidades = new HashMap<>();
+                habilidades.put("Vida Extra", new HabilidadVida());
+                habilidades.put("Fuerza", new HabilidadFuerza());
+                habilidades.put("Velocidad", new HabilidadVelocidad());
+                habilidades.put("Defensa", new HabilidadDefensa());
+                habilidades.put("Ataque Veloz", new HabilidadAtaqueVeloz());
+                habilidades.put("Velocidad II", new HabilidadVelocidad2());
+                habilidades.put("Regeneración", new HabilidadRegeneracion());
+                habilidades.put("Golpe Crítico", new HabilidadGolpeCritico());
+                habilidades.put("Evasión", new HabilidadEvasion());
+            }
+        });
+    }
+
+    // ✅ NUEVO MÉTODO (agregar después del anterior):
+    private boolean cumpleDependencias(String nombreHabilidad) {
+        // Estructura del árbol (mismo que en PantallaArbolHabilidades)
+        String[][] ARBOL = {
+            {"Vida Extra", "Fuerza", "Velocidad"},
+            {"Defensa", "Ataque Veloz", "Velocidad II"},
+            {"Regeneración", "Golpe Crítico", "Evasión"}
+        };
+
+        // Buscar posición en el árbol
+        int fila = -1, columna = -1;
+        for (int f = 0; f < ARBOL.length; f++) {
+            for (int c = 0; c < ARBOL[f].length; c++) {
+                if (ARBOL[f][c].equals(nombreHabilidad)) {
+                    fila = f;
+                    columna = c;
+                    break;
+                }
+            }
+        }
+
+        if (fila == -1) return false; // No encontrada
+
+        // Si está en la primera fila, no tiene dependencias
+        if (fila == 0) return true;
+
+        // Verificar que la habilidad superior esté comprada
+        String nombreSuperior = ARBOL[fila - 1][columna];
+        Habilidad superior = habilidades.get(nombreSuperior);
+
+        return superior != null && superior.comprada;
     }
 
 
 
+    // ✅ REEMPLAZAR MÉTODO intentarComprarHabilidad() (línea 103-114):
     public boolean intentarComprarHabilidad(String nombreHabilidad) {
         Habilidad habilidad = habilidades.get(nombreHabilidad);
+        if (habilidad == null) {
+            System.err.println("❌ Habilidad no existe: " + nombreHabilidad);
+            return false;
+        }
 
-        if (habilidad == null) return false;
+        // Validar si ya está comprada
+        if (habilidad.comprada) {
+            System.out.println("⚠️ Ya tiene esta habilidad: " + nombreHabilidad);
+            return false;
+        }
 
+        // Validar monedas
+        if (this.monedas < habilidad.getCosto()) {
+            System.out.println("⚠️ Monedas insuficientes. Tiene: " + this.monedas + ", Necesita: " + habilidad.getCosto());
+            return false;
+        }
+
+        // ✅ NUEVO: Validar dependencias del árbol
+        if (!cumpleDependencias(nombreHabilidad)) {
+            System.out.println("⚠️ No cumple dependencias para: " + nombreHabilidad);
+            return false;
+        }
+
+        // ✅ Compra válida: aplicar cambios
+        this.monedas -= habilidad.getCosto();
         habilidad.comprada = true;
-        habilidad.aplicar(this);
+        habilidad.aplicar(this); // Aplicar efecto en el servidor
 
+        System.out.println("✅ Habilidad comprada: " + nombreHabilidad);
         return true;
     }
-
 
     public String serializarHabilidades() {
         StringBuilder sb = new StringBuilder();
@@ -212,7 +292,6 @@ public class Jugador {
         if (!evasionHabilitada || estaEvadiendo || tiempoDesdeUltimaEvasion < cooldownEvasion) {
             return;
         }
-
         estaEvadiendo = true;
         tiempoEvasion = 0f;
         tiempoDesdeUltimaEvasion = 0f;
@@ -300,6 +379,7 @@ public class Jugador {
     public void activarRegeneracion(int cantidadPorSegundo) {
         this.regeneracionActiva = true;
         this.cantidadRegeneracion = cantidadPorSegundo;
+
     }
 
 

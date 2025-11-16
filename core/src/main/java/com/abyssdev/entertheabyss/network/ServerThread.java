@@ -102,8 +102,9 @@ public class ServerThread extends Thread {
 
             case "Dash":
                 if (clientIndex != -1) {
-
+                    Client client = clients.get(clientIndex);
                     System.out.println("🏃 Jugador " + clients.get(clientIndex).getNum() + " usa dash");
+                    gameController.hacerDash(client.getNum());
                 }
                 break;
 
@@ -112,6 +113,14 @@ public class ServerThread extends Thread {
                     Client client = clients.get(clientIndex);
                     String roomId = parts[1];
                     gameController.changeRoom(client.getNum(), roomId);
+                }
+                break;
+
+            // ✅ AGREGAR EN processMessage() (después del case "Attack:", línea ~85):
+            case "SolicitarHabilidades":
+                if (clientIndex != -1) {
+                    Client client = clients.get(clientIndex);
+                    gameController.enviarHabilidadesACliente(client.getNum());
                 }
                 break;
 

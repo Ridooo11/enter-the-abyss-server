@@ -1,5 +1,6 @@
 package com.abyssdev.entertheabyss.pantallas;
 
+import com.abyssdev.entertheabyss.habilidades.Habilidad;
 import com.abyssdev.entertheabyss.interfaces.GameController;
 import com.abyssdev.entertheabyss.mapas.*;
 import com.abyssdev.entertheabyss.personajes.*;
@@ -25,6 +26,13 @@ public class PantallaJuego extends Pantalla implements GameController {
     private ServerThread serverThread;
     private boolean juegoIniciado = false;
     private boolean servidorActivo = false;
+
+    // ✅ AGREGAR ESTAS VARIABLES AL INICIO DE LA CLASE (después de línea 40):
+    private float tiempoAcumuladoSync = 0f;
+    private static final float INTERVALO_SYNC_VIDA = 0.5f; // Sincronizar cada 0.5s
+    // Cache para detectar cambios
+    private HashMap<Integer, Integer> ultimaVidaEnviada = new HashMap<>();
+
 
     // 🗺️ Mundo
     private Mapa mapaActual;
@@ -76,7 +84,7 @@ public class PantallaJuego extends Pantalla implements GameController {
 
         // Inicializar mapa y salas
         mapaActual = new Mapa("mazmorra1");
-        mapaActual.agregarSala(new Sala("sala1", "maps/mapa1_sala1.tmx", 1, this.serverThread));
+        mapaActual.agregarSala(new Sala("sala1", "maps/mapa1_sala1.tmx", 10, this.serverThread));
         mapaActual.agregarSala(new Sala("sala2", "maps/mapa1_sala2.tmx", 1, this.serverThread));
         mapaActual.agregarSala(new Sala("sala3", "maps/mapa1_sala5.tmx", 1, this.serverThread));
         mapaActual.agregarSala(new Sala("sala4", "maps/mapa1_sala4.tmx", 1, this.serverThread));
@@ -363,7 +371,7 @@ public class PantallaJuego extends Pantalla implements GameController {
                     if (enemigo.getVida() <= 0 && !enemigo.isRewardGiven()) {
                         enemigo.setRewardGiven(true);  // SOLO UNA VEZ
                         int monedasGanadas = 10; // Puedes ajustar esto
-                        jugador.modificarMonedas(monedasGanadas);
+                        jugador.modificarMonedas(monedasGanadas+1000);
 
                         // ✅ ENVIAR ACTUALIZACIÓN DE MONEDAS A TODOS LOS CLIENTES
                         serverThread.sendMessageToAll("UpdateCoins:" +
@@ -409,6 +417,9 @@ public class PantallaJuego extends Pantalla implements GameController {
                             serverThread.sendMessageToAll("UpdateCoins:" +
                                 jugador.getNumeroJugador() + ":" + jugador.getMonedas());
                             serverThread.sendMessageToAll("BossDead");
+                            boolean noHayEnemigosVivos = salaActual.getEnemigos() == null || salaActual.getEnemigos().isEmpty();
+                            bossKilled(noHayEnemigosVivos);
+
 
                             System.out.println("👑 Jugador " + jugador.getNumeroJugador() +
                                 " derrotó al Boss y ganó " + monedasGanadas + " monedas!");
@@ -420,9 +431,38 @@ public class PantallaJuego extends Pantalla implements GameController {
 
         salaActual.actualizarPuertas();
         verificarTransicionesServidor();
+        // ✅ AGREGAR AL FINAL:
+        sincronizarVidaConClientes(delta);
     }
 
+    // ✅ AGREGAR NUEVO MÉTODO (después de actualizarLogicaJuego()):
+    private void sincronizarVidaConClientes(float delta) {
+        tiempoAcumuladoSync += delta;
 
+        if (tiempoAcumuladoSync >= INTERVALO_SYNC_VIDA) {
+            tiempoAcumuladoSync = 0f;
+
+            for (Jugador jugador : jugadores.values()) {
+                int vidaActual = jugador.getVida();
+                int numJugador = jugador.getNumeroJugador();
+
+                // Obtener última vida enviada (o inicializar)
+                Integer ultimaVida = ultimaVidaEnviada.get(numJugador);
+                if (ultimaVida == null) {
+                    ultimaVida = vidaActual;
+                    ultimaVidaEnviada.put(numJugador, vidaActual);
+                }
+
+                // Solo enviar si cambió
+                if (vidaActual != ultimaVida) {
+                    serverThread.sendMessageToAll("UpdateHealth:" + numJugador + ":" + vidaActual);
+                    ultimaVidaEnviada.put(numJugador, vidaActual);
+
+                    System.out.println("💚 Vida sincronizada J" + numJugador + ": " + vidaActual);
+                }
+            }
+        }
+    }
     public void verificarTransicionesServidor() {
         for (Jugador jugador : jugadores.values()) {
             // Asegurarse de que no haya enemigos vivos antes de permitir la transición
@@ -612,8 +652,30 @@ public class PantallaJuego extends Pantalla implements GameController {
     @Override public void startGame() { juegoIniciado = true;}
     @Override public void move(int n, float x, float y) {}
     @Override public void attack(int n) { if (jugadores.get(n) != null) jugadores.get(n).procesarAtaque(); }
+    @Override public void hacerDash(int numPlayer) {
+        if (jugadores.get(numPlayer) != null) jugadores.get(numPlayer).procesarEvasion();
+    }
     @Override public void enemyKilled(int n, int id) {}
-    @Override public void bossKilled(int n) {}
+     public void bossKilled(boolean noHayEnemigosVivos) {
+
+        if(!noHayEnemigosVivos){
+            return;
+        }
+
+        // Esperar 2 segundos antes de mostrar Game Over
+        new Thread(() -> {
+            try {
+                Thread.sleep(2000);
+
+                // Enviar señal de Game Over a todos los clientes
+                serverThread.sendMessageToAll("WinGame");
+                System.out.println("🎮 Win enviado a todos los clientes");
+
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }).start();
+    }
     @Override public void changeRoom(int n, String roomId) { cambiarSala(roomId);}
     @Override
     public void playerDied(int numPlayer) {
@@ -641,26 +703,76 @@ public class PantallaJuego extends Pantalla implements GameController {
 
 
 
+    // ✅ REEMPLAZAR comprarHabilidad() (línea ~279-298):
     @Override
     public void comprarHabilidad(int numPlayer, String nombreHabilidad) {
         Jugador jugador = jugadores.get(numPlayer);
-        if (jugador == null) return;
+        if (jugador == null) {
+            System.err.println("❌ Jugador " + numPlayer + " no encontrado");
+            return;
+        }
+
+        System.out.println("🛒 Jugador " + numPlayer + " intenta comprar: " + nombreHabilidad);
 
         boolean exito = jugador.intentarComprarHabilidad(nombreHabilidad);
 
         if (exito) {
-            // Enviar confirmación con datos actualizados
+            // Serializar estado actualizado
             String datosHabilidades = jugador.serializarHabilidades();
-            serverThread.sendMessage("CompraExitosa:" + nombreHabilidad + ":" + datosHabilidades + ":" + jugador.getMonedas(),
+            int monedasActuales = jugador.getMonedas();
+
+            // Enviar confirmación
+            serverThread.sendMessage(
+                "CompraExitosa:" + nombreHabilidad + ":" + datosHabilidades + ":" + monedasActuales,
                 serverThread.getClientByNum(numPlayer).getIp(),
-                serverThread.getClientByNum(numPlayer).getPort());
+                serverThread.getClientByNum(numPlayer).getPort()
+            );
+
+            System.out.println("✅ Compra exitosa para jugador " + numPlayer);
         } else {
-            // Enviar rechazo
-            serverThread.sendMessage("CompraFallida:" + nombreHabilidad,
+            // Enviar rechazo con razón
+            String razon = determinarRazonRechazo(jugador, nombreHabilidad);
+            serverThread.sendMessage(
+                "CompraFallida:" + nombreHabilidad + ":" + razon,
                 serverThread.getClientByNum(numPlayer).getIp(),
-                serverThread.getClientByNum(numPlayer).getPort());
+                serverThread.getClientByNum(numPlayer).getPort()
+            );
+
+            System.out.println("❌ Compra fallida para jugador " + numPlayer + ": " + razon);
         }
     }
+    // ✅ NUEVO MÉTODO (agregar después del anterior):
+    private String determinarRazonRechazo(Jugador jugador, String nombreHabilidad) {
+        Habilidad hab = jugador.getHabilidades().get(nombreHabilidad);
+        if (hab == null) return "Habilidad no existe";
+        if (hab.comprada) return "Ya comprada";
+        if (jugador.getMonedas() < hab.getCosto()) return "Monedas insuficientes";
+        return "No cumple dependencias";
+    }
+
+    // ✅ AGREGAR AL FINAL DE LA CLASE (antes de dispose()):
+    @Override
+    public void enviarHabilidadesACliente(int numPlayer) {
+        Jugador jugador = jugadores.get(numPlayer);
+        if (jugador == null) {
+            System.err.println("❌ No se puede enviar habilidades, jugador " + numPlayer + " no existe");
+            return;
+        }
+
+        String datosHabilidades = jugador.serializarHabilidades();
+        int monedas = jugador.getMonedas();
+
+        serverThread.sendMessage(
+            "Habilidades:" + datosHabilidades + ":" + monedas,
+            serverThread.getClientByNum(numPlayer).getIp(),
+            serverThread.getClientByNum(numPlayer).getPort()
+        );
+
+        System.out.println("📤 Habilidades enviadas a jugador " + numPlayer);
+    }
+
+
+
 
     @Override
     public void comprarVida(int numPlayer, int precio) {
@@ -725,7 +837,7 @@ public class PantallaJuego extends Pantalla implements GameController {
         if (jugadores.containsKey(n)) return;
         Jugador j = new Jugador(n, 10f + n * 2f, 10f);
         jugadores.put(n, j);
-        System.out.println("✅ Jugador " + n + " creado");
+        System.out.println("✅ Jugador " + n + " creado con habilidades inicializadas");
 
         if (jugadores.size() >= MAX_JUGADORES) {
             startGame();
