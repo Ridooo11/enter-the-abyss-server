@@ -1,6 +1,7 @@
 package com.abyssdev.entertheabyss.pantallas;
 
 import com.abyssdev.entertheabyss.personajes.Jugador;
+import com.abyssdev.entertheabyss.ui.Imagenes;
 import com.abyssdev.entertheabyss.ui.Sonidos;
 import com.badlogic.gdx.Game;
 import com.badlogic.gdx.Gdx;
@@ -50,8 +51,8 @@ public class PantallaTienda extends Pantalla {
         camara.position.set(camara.viewportWidth / 2f, camara.viewportHeight / 2f, 0);
         camara.update();
 
-        fondoTienda = new Texture("Fondos/OgroTienda3.png");
-        heart100 = new Texture("imagenes/corazon100%.png");
+        fondoTienda = Imagenes.getFondoTienda();
+        heart100 = Imagenes.getCorazon100();
 
         layout = new GlyphLayout();
 

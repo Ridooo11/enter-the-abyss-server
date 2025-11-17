@@ -5,6 +5,7 @@ import com.abyssdev.entertheabyss.interfaces.GameController;
 import com.abyssdev.entertheabyss.mapas.*;
 import com.abyssdev.entertheabyss.personajes.*;
 import com.abyssdev.entertheabyss.network.ServerThread;
+import com.abyssdev.entertheabyss.ui.Imagenes;
 import com.badlogic.gdx.Game;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.*;
@@ -17,6 +18,7 @@ import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 
+import java.awt.font.ImageGraphicAttribute;
 import java.util.ArrayList;
 import java.util.HashMap;
 
@@ -78,7 +80,7 @@ public class PantallaJuego extends Pantalla implements GameController {
         font.setColor(Color.WHITE);
 
         texturaFade = generarTextura();
-        spriteJugador = new Texture("personajes/player.png");
+        spriteJugador = Imagenes.getSpriteJugador();
 
         serverThread = new ServerThread(this);
         serverThread.start();
