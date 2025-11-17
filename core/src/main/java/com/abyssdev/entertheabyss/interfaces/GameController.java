@@ -8,12 +8,12 @@ public interface GameController {
     void changeRoom(int numPlayer, String roomId);
     void timeOut();
     void comprarHabilidad(int numPlayer, String nombreHabilidad);
-
+    boolean hacerDash(int numPlayer); // Cambiado de void a boolean
     void playerDied(int numPlayer);
     void resetearServidorCompleto();
     void comprarVida(int numPlayer, int precio);
 
     void enviarHabilidadesACliente(int numPlayer);
 
-    void hacerDash(int numPlayer);
+
 }

@@ -54,6 +54,8 @@ public class PantallaJuego extends Pantalla implements GameController {
     private Texture texturaFade;
     private Texture spriteJugador;
 
+    private HashMap<Integer, Integer> ultimaVidaMaximaEnviada = new HashMap<>();
+
     public PantallaJuego(Game juego, SpriteBatch batch) {
         super(juego, batch);
     }
@@ -458,6 +460,23 @@ public class PantallaJuego extends Pantalla implements GameController {
         salaActual.actualizarPuertas();
         verificarTransicionesServidor();
         sincronizarVidaConClientes(delta);
+
+        for (Jugador jugador : jugadores.values()) {
+            int vidaMaximaActual = jugador.getVidaMaxima();
+            int numJugador = jugador.getNumeroJugador();
+
+            Integer ultimaVidaMaxima = ultimaVidaMaximaEnviada.get(numJugador);
+            if (ultimaVidaMaxima == null) {
+                ultimaVidaMaxima = vidaMaximaActual;
+                ultimaVidaMaximaEnviada.put(numJugador, vidaMaximaActual);
+            }
+
+            if (vidaMaximaActual != ultimaVidaMaxima) {
+                serverThread.sendMessageToAll("UpdateMaxHealth:" + numJugador + ":" + vidaMaximaActual);
+                ultimaVidaMaximaEnviada.put(numJugador, vidaMaximaActual);
+                System.out.println("💚 Vida máxima sincronizada J" + numJugador + ": " + vidaMaximaActual);
+            }
+        }
     }
 
     private void verificarCondicionVictoria() {
@@ -705,9 +724,30 @@ public class PantallaJuego extends Pantalla implements GameController {
     // ===== GameController =====
     @Override public void startGame() { juegoIniciado = true;}
     @Override public void move(int n, float x, float y) {}
-    @Override public void attack(int n) { if (jugadores.get(n) != null) jugadores.get(n).procesarAtaque(); }
-    @Override public void hacerDash(int numPlayer) {
-        if (jugadores.get(numPlayer) != null) jugadores.get(numPlayer).procesarEvasion();
+    @Override
+    public void attack(int numPlayer) {
+        Jugador jugador = jugadores.get(numPlayer);
+        if (jugador != null) {
+            // Verificar si puede atacar (cooldown)
+            if (jugador.puedeAtacar()) { // ✅ Necesitas agregar este método
+                jugador.procesarAtaque();
+
+                // ✅ NUEVO: Notificar a todos SOLO si el ataque fue exitoso
+                serverThread.sendMessageToAll("PlayerAttack:" + numPlayer);
+                System.out.println("⚔️ Jugador " + numPlayer + " atacó (cooldown OK)");
+            } else {
+                System.out.println("⏳ Jugador " + numPlayer + " en cooldown de ataque");
+            }
+        }
+    }
+    @Override
+    public boolean hacerDash(int numPlayer) {
+        Jugador jugador = jugadores.get(numPlayer);
+        if (jugador != null) {
+            boolean exitoso = jugador.procesarEvasion(); // Retorna true si fue exitoso
+            return exitoso;
+        }
+        return false;
     }
     @Override public void enemyKilled(int n, int id) {}
     public void bossKilled(boolean salaLimpia) {

@@ -103,11 +103,20 @@ public class ServerThread extends Thread {
             case "Dash":
                 if (clientIndex != -1) {
                     Client client = clients.get(clientIndex);
-                    System.out.println("🏃 Jugador " + clients.get(clientIndex).getNum() + " usa dash");
-                    gameController.hacerDash(client.getNum());
+                    int numJugador = client.getNum();
+
+                    // El servidor valida y ejecuta el dash
+                    boolean dashExitoso = gameController.hacerDash(numJugador);
+
+                    // ✅ NUEVO: Solo notificar si el dash fue exitoso
+                    if (dashExitoso) {
+                        sendMessageToAll("PlayerDash:" + numJugador);
+                        System.out.println("🏃 Jugador " + numJugador + " dash exitoso");
+                    } else {
+                        System.out.println("⏳ Jugador " + numJugador + " dash en cooldown");
+                    }
                 }
                 break;
-
             case "ChangeRoom":
                 if (clientIndex != -1 && parts.length >= 2) {
                     Client client = clients.get(clientIndex);

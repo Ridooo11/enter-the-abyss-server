@@ -276,6 +276,10 @@ public class Jugador {
     /**
      * Procesa el input de ataque recibido del cliente
      */
+    public boolean puedeAtacar() {
+        return tiempoUltimoAtaque >= cooldownAtaque;
+    }
+
     public void procesarAtaque() {
         if (tiempoUltimoAtaque >= cooldownAtaque && accionActual != Accion.MUERTE) {
             accionActual = Accion.ATAQUE;
@@ -288,14 +292,18 @@ public class Jugador {
     /**
      * Procesa el input de evasión recibido del cliente
      */
-    public void procesarEvasion() {
+    // Cambiar de void a boolean
+    public boolean procesarEvasion() {
         if (!evasionHabilitada || estaEvadiendo || tiempoDesdeUltimaEvasion < cooldownEvasion) {
-            return;
+            return false; // ✅ No se puede usar dash
         }
+
         estaEvadiendo = true;
         tiempoEvasion = 0f;
         tiempoDesdeUltimaEvasion = 0f;
         velocidad = velocidadBase * 4f;
+
+        return true; // ✅ Dash exitoso
     }
 
     private void actualizarHitboxAtaque() {
@@ -364,8 +372,13 @@ public class Jugador {
     }
 
     public void aumentarVidaMaxima(int cantidad) {
+        int vidaAnterior = this.vida;
         this.vidaMaxima += cantidad;
-        this.vida = Math.min(this.vida, this.vidaMaxima);
+        // ✅ NUEVO: Curar al jugador cuando aumenta vida máxima
+        this.vida = Math.min(this.vidaMaxima, this.vida + cantidad);
+
+        System.out.println("💚 Vida máxima aumentada: " + (this.vidaMaxima - cantidad) + " → " + this.vidaMaxima);
+        System.out.println("💚 Vida actual: " + vidaAnterior + " → " + this.vida);
     }
 
     public void setAccionActual(Accion accion) {
