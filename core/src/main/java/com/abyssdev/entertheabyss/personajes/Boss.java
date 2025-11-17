@@ -7,7 +7,6 @@ import com.badlogic.gdx.math.Rectangle;
 
 public class Boss extends Enemigo {
 
-
     public Boss(float x, float y,float velocidadBoss,float coolDown,int danio) {
         super(x, y,velocidadBoss,coolDown,danio);
         this.vidaMaxima = 200;
@@ -53,5 +52,4 @@ public class Boss extends Enemigo {
                 return animIdle.getKeyFrame(tiempoEstado);
         }
     }
-
 }

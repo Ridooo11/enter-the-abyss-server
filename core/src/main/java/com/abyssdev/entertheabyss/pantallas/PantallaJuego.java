@@ -35,6 +35,7 @@ public class PantallaJuego extends Pantalla implements GameController {
     private static final float INTERVALO_SYNC_VIDA = 0.5f; // Sincronizar cada 0.5s
     // Cache para detectar cambios
     private HashMap<Integer, Integer> ultimaVidaEnviada = new HashMap<>();
+    private boolean bossRewardGiven = false;
 
 
     // 🗺️ Mundo
@@ -422,7 +423,7 @@ public class PantallaJuego extends Pantalla implements GameController {
                 }
 
                 // ✅ Procesar ataques AL BOSS (solo si está vivo)
-                if (!boss.debeEliminarse()) {
+                if (!boss.debeEliminarse() && !bossRewardGiven) {
                     for (Jugador jugador : jugadores.values()) {
                         Rectangle hitboxAtaque = jugador.getHitboxAtaque();
                         if (hitboxAtaque.getWidth() <= 0) continue;
@@ -434,7 +435,8 @@ public class PantallaJuego extends Pantalla implements GameController {
                             }
 
                             // ✅ NUEVO: Solo marcar como muerto, NO verificar victoria aquí
-                            if (boss.debeEliminarse()) {
+                            if (boss.getVida() <= 0) {
+                                bossRewardGiven = true;
                                 System.out.println("👑 Boss eliminado por jugador " + jugador.getNumeroJugador());
 
                                 // Dar monedas
@@ -985,6 +987,7 @@ public class PantallaJuego extends Pantalla implements GameController {
 
         // 5. Resetear timers
         tiempoAcumulado = 0f;
+        bossRewardGiven = false;
 
         System.out.println("✅ Servidor reseteado completamente");
         System.out.println("👥 Esperando " + MAX_JUGADORES + " jugadores...");
