@@ -1023,6 +1023,7 @@ public class PantallaJuego extends Pantalla implements GameController {
         salaActual = null;
         tiempoAcumulado = 0f;
 
+
         System.out.println("✅ Estado del servidor limpiado");
     }
 
@@ -1042,16 +1043,12 @@ public class PantallaJuego extends Pantalla implements GameController {
             }
         }
 
-        // Limpiar mapa
         if (mapaActual != null) {
             mapaActual.dispose();
         }
 
         if (texturaFade != null) {
             texturaFade.dispose();
-        }
-        if (spriteJugador != null) {
-            spriteJugador.dispose();
         }
     }
 
