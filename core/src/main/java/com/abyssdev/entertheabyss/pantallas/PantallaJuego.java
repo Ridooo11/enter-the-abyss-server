@@ -90,9 +90,9 @@ public class PantallaJuego extends Pantalla implements GameController {
 
         // Inicializar mapa y salas
         mapaActual = new Mapa("mazmorra1");
-        mapaActual.agregarSala(new Sala("sala1", "maps/mapa1_sala1.tmx", 5, this.serverThread));
-        mapaActual.agregarSala(new Sala("sala2", "maps/mapa1_sala2.tmx", 6, this.serverThread));
-        mapaActual.agregarSala(new Sala("sala3", "maps/mapa1_sala5.tmx", 7, this.serverThread));
+        mapaActual.agregarSala(new Sala("sala1", "maps/mapa1_sala1.tmx", 4, this.serverThread));
+        mapaActual.agregarSala(new Sala("sala2", "maps/mapa1_sala2.tmx", 5, this.serverThread));
+        mapaActual.agregarSala(new Sala("sala3", "maps/mapa1_sala5.tmx", 6, this.serverThread));
         mapaActual.agregarSala(new Sala("sala4", "maps/mapa1_sala4.tmx", 8, this.serverThread));
         mapaActual.agregarSala(new Sala("sala5", "maps/mapa2_posible.tmx", 10, this.serverThread));
 

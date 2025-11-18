@@ -54,7 +54,6 @@ public class MenuInicio extends Pantalla {
         fondo = Imagenes.getFondoMenu();
 
         layout = new GlyphLayout();
-        Sonidos.reproducirMusicaMenu();
     }
 
     @Override
